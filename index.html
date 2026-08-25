@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dalla RAL al netto — calcolatore 2026</title>
+  <meta name="description" content="Calcolatore della retribuzione netta annuale e mensile a partire dalla RAL, con il dettaglio di ogni trattenuta e il riferimento normativo di ogni regola. Anno d'imposta 2026.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧾</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./src/stile.css">
+</head>
+<body>
+
+<header class="intestazione">
+  <div class="contenuto">
+    <p class="occhiello">Anno d'imposta 2026</p>
+    <h1>Dalla RAL al netto</h1>
+    <p class="sottotitolo">
+      Quanto resta davvero di una retribuzione annua lorda, e dove finisce il resto.
+      Ogni voce è apribile: dentro ci trovi la formula applicata, la norma che la impone
+      e il file che la implementa.
+    </p>
+  </div>
+</header>
+
+<main class="contenuto">
+
+  <!-- ============================================================= -->
+  <!-- INPUT                                                          -->
+  <!-- ============================================================= -->
+  <form id="modulo" class="modulo">
+
+    <div class="campo campo-ral">
+      <label for="ral">Retribuzione annua lorda</label>
+      <div class="ral-riga">
+        <div class="campo-valuta">
+          <input type="number" id="ral" name="ral" value="35000" min="0" max="1000000" step="500"
+                 inputmode="numeric" required>
+          <span class="suffisso">€</span>
+        </div>
+        <input type="range" id="ral-cursore" min="0" max="200000" step="500" value="35000"
+               aria-label="Cursore per la retribuzione annua lorda">
+      </div>
+    </div>
+
+    <fieldset class="campo">
+      <legend>Mensilità</legend>
+      <div class="segmenti">
+        <label><input type="radio" name="mensilita" value="12"><span>12</span></label>
+        <label><input type="radio" name="mensilita" value="13"><span>13</span></label>
+        <label><input type="radio" name="mensilita" value="14" checked><span>14</span></label>
+      </div>
+    </fieldset>
+
+    <div class="campo">
+      <label for="comune">Comune di residenza</label>
+      <input type="text" id="comune" list="lista-comuni" placeholder="Inizia a scrivere…"
+             autocomplete="off" spellcheck="false">
+      <datalist id="lista-comuni"></datalist>
+      <p class="nota" id="nota-comune"></p>
+    </div>
+
+    <div class="campo">
+      <label for="regione">Regione</label>
+      <select id="regione"></select>
+      <p class="nota">Si imposta da sola in base al comune scelto.</p>
+    </div>
+
+    <div class="campo">
+      <label for="giorni">Giorni lavorati nell'anno</label>
+      <input type="number" id="giorni" value="365" min="1" max="365" step="1" inputmode="numeric">
+      <p class="nota">Ferie, malattia e maternità contano come lavorati.</p>
+    </div>
+
+    <fieldset class="campo campo-interruttori">
+      <legend>Tipo di rapporto</legend>
+      <label class="interruttore">
+        <input type="checkbox" id="tempo-determinato">
+        <span>Tempo determinato</span>
+      </label>
+      <label class="interruttore">
+        <input type="checkbox" id="apprendista">
+        <span>Apprendista</span>
+      </label>
+    </fieldset>
+
+    <details class="campo campo-famiglia">
+      <summary>Familiari a carico</summary>
+      <div class="griglia-famiglia">
+        <label class="interruttore">
+          <input type="checkbox" id="coniuge">
+          <span>Coniuge a carico</span>
+        </label>
+
+        <div class="campo-piccolo">
+          <label for="figli">Figli 21-29 anni</label>
+          <input type="number" id="figli" value="0" min="0" max="12" step="1">
+        </div>
+
+        <div class="campo-piccolo">
+          <label for="figli-disabili">Di cui con disabilità</label>
+          <input type="number" id="figli-disabili" value="0" min="0" max="12" step="1">
+        </div>
+
+        <div class="campo-piccolo">
+          <label for="percentuale-figli">Quota a tuo carico</label>
+          <select id="percentuale-figli">
+            <option value="0.5" selected>50% (ripartita)</option>
+            <option value="1">100%</option>
+          </select>
+        </div>
+
+        <div class="campo-piccolo">
+          <label for="altri-familiari">Altri familiari conviventi</label>
+          <input type="number" id="altri-familiari" value="0" min="0" max="12" step="1">
+        </div>
+      </div>
+      <p class="nota">
+        Sotto i 21 anni la detrazione IRPEF non esiste: al suo posto c'è l'Assegno Unico
+        dell'INPS, che non entra in questo calcolo.
+      </p>
+    </details>
+
+    <button type="submit" class="bottone-calcola">Calcola</button>
+    <p class="nota nota-stato in-caricamento" id="stato-comuni">Caricamento dei dati comunali…</p>
+  </form>
+
+  <!-- ============================================================= -->
+  <!-- OUTPUT                                                         -->
+  <!-- ============================================================= -->
+  <section id="risultato" hidden>
+
+    <div id="cifre" class="cifre"></div>
+
+    <section class="blocco">
+      <h2>Dove finisce la RAL</h2>
+      <p class="introduzione">
+        Ogni barra parte da dove finisce la precedente. In rosso ciò che viene trattenuto,
+        in verde ciò che il datore aggiunge al netto senza tassarlo.
+      </p>
+      <div id="grafico-cascata"></div>
+    </section>
+
+    <section class="blocco">
+      <h2>Come è stato calcolato</h2>
+      <p class="introduzione">
+        Le voci sono nell'ordine esatto in cui il calcolo le applica. Aprine una per vedere
+        la formula, la spiegazione e il file che la contiene.
+      </p>
+      <div id="voci" class="voci"></div>
+      <div id="disposizione-regionale" class="disposizione"></div>
+    </section>
+
+    <section class="blocco">
+      <h2>Perché l'IRPEF non è una percentuale sola</h2>
+      <p class="introduzione">
+        L'imposta è progressiva per scaglioni: ogni fetta di reddito paga la propria aliquota.
+        Chi guadagna 40.000 € non paga il 33% su tutto, ma il 23% sui primi 28.000.
+      </p>
+      <div id="grafico-scaglioni"></div>
+    </section>
+
+    <section class="blocco">
+      <h2>La tua posizione sulla curva</h2>
+      <p class="introduzione">
+        Netto annuo e pressione fiscale al variare della RAL, a parità di tutti gli altri
+        parametri che hai impostato. Il punto evidenziato sei tu.
+      </p>
+      <div id="grafico-curva"></div>
+      <div class="legenda">
+        <span class="legenda-voce legenda-netto">Netto annuo</span>
+        <span class="legenda-voce legenda-pressione">Pressione fiscale effettiva</span>
+      </div>
+    </section>
+
+  </section>
+
+  <!-- ============================================================= -->
+  <!-- TRASPARENZA                                                    -->
+  <!-- ============================================================= -->
+  <section class="blocco blocco-semplificazioni">
+    <h2>Cosa questo calcolatore non fa</h2>
+    <p class="introduzione">
+      Nessuna semplificazione è nascosta nel codice: sono elencate tutte qui, con l'impatto
+      stimato sul risultato. Due voci segnalano punti in cui i documenti di partenza si
+      contraddicono e ho dovuto scegliere.
+      <span class="conteggio" id="conteggio-semplificazioni"></span>
+    </p>
+    <div id="semplificazioni"></div>
+  </section>
+
+  <section class="blocco">
+    <h2>Parametri in vigore</h2>
+    <div id="parametri"></div>
+    <p class="minuta">
+      Tutti i valori vivono in un solo file, <code>src/calcolo/parametri-2026.js</code>.
+      Le aliquote delle addizionali non sono scritte a mano: si rigenerano dai CSV ufficiali
+      con <code>npm run aggiorna-aliquote</code>.
+    </p>
+  </section>
+
+  <section class="blocco">
+    <h2>Fonti</h2>
+    <ul class="fonti">
+      <li>
+        <strong>IRPEF</strong> — Art. 11 TUIR ·
+        <a href="https://www.agenziaentrate.gov.it/portale/imposta-sul-reddito-delle-persone-fisiche-irpef-/aliquote-e-calcolo-dell-irpef" target="_blank" rel="noopener">Agenzia delle Entrate, aliquote e calcolo</a>
+      </li>
+      <li>
+        <strong>Contributi INPS</strong> — Circolare INPS n. 6 del 30/01/2026 ·
+        <a href="https://www.inps.it/it/it/inps-comunica/atti/circolari-messaggi-e-normativa/dettaglio.circolari-e-messaggi.2026.01.circolare-numero-6-del-30-01-2026_15151.html" target="_blank" rel="noopener">minimali, massimale e fascia dell'1%</a>
+      </li>
+      <li>
+        <strong>Detrazioni</strong> — Artt. 12 e 13 TUIR, come modificati da D.Lgs. 216/2023,
+        D.Lgs. 192/2025 e L. 207/2024 ·
+        <a href="https://www.agenziaentrate.gov.it/portale/documents/20143/8410823/Circolare+lavoro+dipendente+LB2025+DD+IRPEF+n.+4+del+16+maggio+2025.pdf/36979eaa-9fc5-a4ec-a7aa-136497c53f91" target="_blank" rel="noopener">Circolare AdE n. 4/E del 16/05/2025</a>
+      </li>
+      <li>
+        <strong>Trattamento integrativo</strong> — D.L. 3/2020 art. 1, conv. L. 21/2020;
+        L. 207/2024 art. 1 c. 2-3
+      </li>
+      <li>
+        <strong>Cuneo fiscale</strong> — L. 207/2024 art. 1 commi 4-9
+      </li>
+      <li>
+        <strong>Addizionali</strong> — Art. 50 D.Lgs. 446/1997 e D.Lgs. 360/1998 ·
+        <a id="fonte-regionale" href="#" target="_blank" rel="noopener">CSV ufficiale del Dipartimento delle Finanze</a>
+      </li>
+    </ul>
+    <p class="minuta">
+      I documenti integrali usati per implementare le regole sono nella cartella
+      <code>docs/</code> del progetto.
+    </p>
+  </section>
+
+</main>
+
+<footer class="pie">
+  <div class="contenuto">
+    <p>
+      Strumento di stima. Non sostituisce il cedolino elaborato dal consulente del lavoro,
+      né la dichiarazione dei redditi. Le regole implementate sono verificabili una per una
+      nei file citati accanto a ogni voce.
+    </p>
+  </div>
+</footer>
+
+<script type="module" src="./src/ui/app.js"></script>
+</body>
+</html>

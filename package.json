@@ -1,0 +1,13 @@
+{
+  "name": "ral-reaper",
+  "version": "1.0.0",
+  "description": "Calcolatore di retribuzione netta annuale a partire dalla RAL — regole fiscali italiane 2026",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test",
+    "aggiorna-aliquote": "node strumenti/aggiorna-aliquote.mjs 2026",
+    "dev": "node strumenti/server-locale.mjs"
+  },
+  "engines": { "node": ">=20" }
+}
