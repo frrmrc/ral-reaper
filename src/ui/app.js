@@ -7,17 +7,18 @@
  *   2. chiama calcolaNetto()
  *   3. disegna il risultato
  *
- * Se un numero ti sembra sbagliato, il file da aprire non è questo: è quello
- * indicato accanto a ogni voce nella sezione "Come è stato calcolato".
+ * Se un numero ti sembra sbagliato, il file da aprire non è questo: sono i
+ * moduli in src/calcolo/.
  */
 
 import { calcolaNetto } from '../calcolo/calcola-netto.js';
 import { SEMPLIFICAZIONI } from '../calcolo/semplificazioni.js';
-import { IRPEF, INPS, ANNO } from '../calcolo/parametri-2026.js';
-import { ALIQUOTE_REGIONALI, SCARICATO_IL, FONTE_REGIONALE } from '../dati/aliquote-regionali-2026.js';
+import { ANNO } from '../calcolo/parametri-2026.js';
+import { ALIQUOTE_REGIONALI, FONTE_REGIONALE } from '../dati/aliquote-regionali-2026.js';
 import { PROVINCIA_A_REGIONE } from '../dati/province-regioni.js';
-import { euro, euroTondo, numero, percentuale, normalizza, nomeProprio, testoSicuro } from './formato.js';
-import { graficoCascata, graficoCurva, graficoScaglioni } from './grafici.js';
+import { euro, euroTondo, percentuale, normalizza, nomeProprio, testoSicuro } from './formato.js';
+import { PREZZO_PER_MILIONE, CAMBIO_EUR_USD, tokenDa } from './unita.js';
+import { graficoRipartizioneRal, graficoCurva, graficoScaglioni } from './grafici.js';
 
 /* ------------------------------------------------------------------ *
  * Stato
@@ -29,12 +30,17 @@ let comuneScelto = null;
 
 const $ = (selettore) => document.querySelector(selettore);
 
+/**
+ * Stato dell'interruttore sopra le cifre. Non è duplicato in una variabile:
+ * la fonte è la casella stessa, così non può divergere da ciò che si vede.
+ */
+const inToken = () => $('#unita-token')?.checked === true;
+
 /* ------------------------------------------------------------------ *
  * Caricamento dei dati comunali
  * ------------------------------------------------------------------ */
 
 async function caricaComuni() {
-  const stato = $('#stato-comuni');
   try {
     const risposta = await fetch('./src/dati/aliquote-comunali-2026.json');
     if (!risposta.ok) throw new Error(`HTTP ${risposta.status}`);
@@ -50,15 +56,12 @@ async function caricaComuni() {
       .map(([codice, c]) => ({ codice, ...c, ricerca: normalizza(c.nome) }))
       .sort((a, b) => a.nome.localeCompare(b.nome, 'it'));
 
-    stato.textContent = `${numero(comuniOrdinati.length)} comuni caricati dal CSV ufficiale MEF`;
-    stato.classList.remove('in-caricamento');
-
     // Preselezione utile: Milano, così la pagina è calcolabile subito.
     if (!comuneScelto) selezionaComune('F205');
   } catch (errore) {
-    stato.textContent = 'Dati comunali non caricati: l\'addizionale comunale resterà a zero. '
-      + `(${errore.message})`;
-    stato.classList.add('errore');
+    // Non mostrato a schermo: se il fetch fallisce, l'addizionale comunale
+    // resta semplicemente a zero. Il messaggio resta in console per il debug.
+    console.error('Dati comunali non caricati, addizionale comunale a zero:', errore);
   }
 }
 
@@ -95,13 +98,62 @@ function aggiornaNotaComune() {
 
 /* ------------------------------------------------------------------ *
  * Ricerca del comune
- * ------------------------------------------------------------------ */
+ * ------------------------------------------------------------------ *
+ *
+ * Tendina disegnata a mano, non <input list> nativo. Con il datalist del
+ * browser, ogni digitazione che coincideva ESATTAMENTE con un nome di comune
+ * (es. arrivando a "Milano" cancellando "Milano (MI)" con backspace)
+ * veniva risolta subito e il campo riscritto a "Milano (MI)": la
+ * cancellazione sembrava non funzionare perché il testo tornava indietro da
+ * solo. Qui la selezione avviene SOLO su un'azione esplicita — click o invio
+ * su una voce evidenziata — mai in automatico durante la digitazione.
+ */
+
+let suggerimentiCorrenti = [];
+let indiceEvidenziato = -1;
+
+function mostraSuggerimenti() {
+  $('#lista-comuni').hidden = false;
+  $('#comune').setAttribute('aria-expanded', 'true');
+}
+
+function nascondiSuggerimenti() {
+  const lista = $('#lista-comuni');
+  lista.hidden = true;
+  lista.innerHTML = '';
+  suggerimentiCorrenti = [];
+  indiceEvidenziato = -1;
+  $('#comune').setAttribute('aria-expanded', 'false');
+  $('#comune').removeAttribute('aria-activedescendant');
+}
+
+function evidenziaSuggerimento(indice) {
+  const voci = $('#lista-comuni').querySelectorAll('.suggerimento');
+  voci.forEach((v, i) => v.classList.toggle('attivo', i === indice));
+  indiceEvidenziato = indice;
+
+  if (indice >= 0 && voci[indice]) {
+    voci[indice].scrollIntoView({ block: 'nearest' });
+    $('#comune').setAttribute('aria-activedescendant', voci[indice].id);
+  } else {
+    $('#comune').removeAttribute('aria-activedescendant');
+  }
+}
+
+/** Selezione esplicita di una voce della tendina: click o invio, mai input. */
+function confermaSuggerimento(indice) {
+  const scelto = suggerimentiCorrenti[indice];
+  if (!scelto) return;
+  selezionaComune(scelto.codice);
+  nascondiSuggerimenti();
+  if (!$('#risultato').hidden) calcolaEDisegna();
+}
 
 function aggiornaSuggerimenti() {
-  const testo = normalizza($('#comune').value.replace(/\s*\([A-Z]{2}\)\s*$/, ''));
+  const testo = normalizza($('#comune').value);
   const lista = $('#lista-comuni');
 
-  if (testo.length < 2 || !comuniOrdinati.length) { lista.innerHTML = ''; return; }
+  if (testo.length < 2 || !comuniOrdinati.length) { nascondiSuggerimenti(); return; }
 
   // Prima chi inizia con il testo digitato, poi chi lo contiene.
   const iniziano = [];
@@ -112,12 +164,24 @@ function aggiornaSuggerimenti() {
     if (iniziano.length >= 40) break;
   }
 
-  lista.innerHTML = [...iniziano, ...contengono]
-    .slice(0, 40)
-    .map((c) => `<option data-codice="${c.codice}" value="${testoSicuro(c.nome)} (${c.provincia})"></option>`)
-    .join('');
+  suggerimentiCorrenti = [...iniziano, ...contengono].slice(0, 40);
+  indiceEvidenziato = -1;
+
+  if (suggerimentiCorrenti.length === 0) {
+    lista.innerHTML = '<li class="suggerimento-vuoto">Nessun comune trovato</li>';
+    mostraSuggerimenti();
+    return;
+  }
+
+  lista.innerHTML = suggerimentiCorrenti.map((c, i) => `
+    <li class="suggerimento" role="option" id="suggerimento-${i}" data-indice="${i}">
+      ${testoSicuro(c.nome)}<span class="suggerimento-provincia">(${c.provincia})</span>
+    </li>`).join('');
+
+  mostraSuggerimenti();
 }
 
+/** Fallback per chi digita il nome completo e preme invio senza usare la tendina. */
 function risolviComuneDigitato() {
   const grezzo = $('#comune').value.trim();
   const conProvincia = grezzo.match(/^(.*)\s*\(([A-Z]{2})\)$/);
@@ -165,7 +229,7 @@ function leggiInput() {
  * ------------------------------------------------------------------ */
 
 /** Una riga della tabella, con il dettaglio dei passi apribile. */
-function rigaVoce({ etichetta, valore, segno, modulo, passi = [], note = '', evidenza = false }) {
+function rigaVoce({ etichetta, valore, segno, passi = [], note = '', evidenza = false, finale = false }) {
   const passiHtml = passi.length ? `
     <ol class="passi">
       ${passi.map((p) => `
@@ -177,7 +241,7 @@ function rigaVoce({ etichetta, valore, segno, modulo, passi = [], note = '', evi
     </ol>` : '<p class="passo-spiegazione">Nessun dettaglio per questa voce.</p>';
 
   return `
-    <details class="voce ${evidenza ? 'voce-evidenza' : ''} voce-${segno === '+' ? 'positiva' : segno === '−' ? 'negativa' : 'neutra'}">
+    <details class="voce ${evidenza ? 'voce-evidenza' : ''} ${finale ? 'voce-finale' : ''} voce-${segno === '+' ? 'positiva' : segno === '−' ? 'negativa' : 'neutra'}">
       <summary>
         <span class="voce-etichetta">${testoSicuro(etichetta)}</span>
         ${note ? `<span class="voce-nota">${testoSicuro(note)}</span>` : ''}
@@ -185,45 +249,61 @@ function rigaVoce({ etichetta, valore, segno, modulo, passi = [], note = '', evi
       </summary>
       <div class="voce-dettaglio">
         ${passiHtml}
-        <p class="voce-modulo">Regola implementata in <code>src/calcolo/${modulo}</code></p>
       </div>
     </details>`;
+}
+
+/**
+ * Le tre cifre in evidenza, in euro o in token.
+ *
+ * In token ogni cifra occupa due riquadri invece di uno: input e output hanno
+ * prezzi diversi, quindi sono due risposte diverse alla stessa domanda e vanno
+ * lette insieme. L'importo in euro resta nella riga sotto: l'interruttore è una
+ * battuta, non un modo per perdere il numero che si era venuti a cercare.
+ */
+function disegnaCifre(r) {
+  const token = inToken();
+
+  const cifre = [
+    { etichetta: 'Netto annuo', valore: r.nettoAnnuo, principale: true,
+      sotto: `${percentuale(r.percentualeNetto)} della RAL` },
+    { etichetta: 'Netto per mensilità', valore: r.nettoMensile,
+      sotto: `su ${r.mensilita} mensilità` },
+    { etichetta: 'Trattenute totali', valore: r.totaleTrattenute,
+      sotto: 'contributi e imposte' },
+  ];
+
+  const riquadro = ({ etichetta, valore, sotto, principale }, tipo) => `
+    <div class="cifra ${principale ? 'cifra-principale' : ''} ${tipo ? 'cifra-token' : ''}">
+      <span class="cifra-etichetta">${testoSicuro(etichetta)}${tipo ? ` · ${tipo}` : ''}</span>
+      <strong class="cifra-valore">${tipo ? tokenDa(valore, tipo) : euroTondo(valore)}</strong>
+      <span class="cifra-sotto">${tipo ? `${euroTondo(valore)} a ${PREZZO_PER_MILIONE[tipo]} $ per milione` : sotto}</span>
+    </div>`;
+
+  $('#cifre').className = `cifre ${token ? 'cifre-token' : ''}`;
+  $('#cifre').innerHTML = cifre
+    .map((c) => (token ? riquadro(c, 'input') + riquadro(c, 'output') : riquadro(c, null)))
+    .join('');
+
+  $('#nota-unita').textContent = token
+    ? `Listino Anthropic per Claude Fable 5, cambio 1 € = ${CAMBIO_EUR_USD.toLocaleString('it-IT')} $.`
+    : '';
 }
 
 function disegnaRisultato(r) {
   const d = r.dettaglio;
 
   /* --- Cifre principali ------------------------------------------- */
-  $('#cifre').innerHTML = `
-    <div class="cifra cifra-principale">
-      <span class="cifra-etichetta">Netto annuo</span>
-      <strong class="cifra-valore">${euroTondo(r.nettoAnnuo)}</strong>
-      <span class="cifra-sotto">${percentuale(r.percentualeNetto)} della RAL</span>
-    </div>
-    <div class="cifra">
-      <span class="cifra-etichetta">Netto per mensilità</span>
-      <strong class="cifra-valore">${euroTondo(r.nettoMensile)}</strong>
-      <span class="cifra-sotto">su ${r.mensilita} mensilità</span>
-    </div>
-    <div class="cifra">
-      <span class="cifra-etichetta">Trattenute totali</span>
-      <strong class="cifra-valore">${euroTondo(r.totaleTrattenute)}</strong>
-      <span class="cifra-sotto">contributi e imposte</span>
-    </div>
-    <div class="cifra">
-      <span class="cifra-etichetta">Aliquota marginale</span>
-      <strong class="cifra-valore">${percentuale(r.aliquotaMarginaleIrpef, 0)}</strong>
-      <span class="cifra-sotto">IRPEF sull'ultimo euro</span>
-    </div>`;
+  disegnaCifre(r);
 
-  /* --- Grafico a cascata ------------------------------------------ */
-  $('#grafico-cascata').innerHTML = graficoCascata(r);
+  /* --- Ripartizione della RAL --------------------------------------- */
+  $('#grafico-ripartizione-ral').innerHTML = graficoRipartizioneRal(r);
 
   /* --- Voce per voce ----------------------------------------------- */
   const voci = [
     rigaVoce({
       etichetta: 'Retribuzione annua lorda',
-      valore: r.ral, segno: '', modulo: 'calcola-netto.js', evidenza: true,
+      valore: r.ral, segno: '', evidenza: true,
       note: `${r.mensilita} mensilità`,
       passi: [{
         titolo: 'Punto di partenza',
@@ -235,14 +315,14 @@ function disegnaRisultato(r) {
 
     rigaVoce({
       etichetta: 'Contributi INPS a carico del lavoratore',
-      valore: r.contributiInps, segno: '−', modulo: 'contributi-inps.js',
+      valore: r.contributiInps, segno: '−',
       note: percentuale(r.ral > 0 ? r.contributiInps / r.ral : 0, 2),
       passi: d.inps.passi,
     }),
 
     rigaVoce({
       etichetta: 'Reddito imponibile IRPEF',
-      valore: r.imponibile, segno: '=', modulo: 'calcola-netto.js', evidenza: true,
+      valore: r.imponibile, segno: '=', evidenza: true,
       passi: [{
         titolo: 'RAL meno contributi',
         formula: `${euro(r.ral)} − ${euro(r.contributiInps)} = ${euro(r.imponibile)}`,
@@ -253,10 +333,10 @@ function disegnaRisultato(r) {
 
     rigaVoce({
       etichetta: 'IRPEF lorda',
-      valore: r.irpefLorda, segno: '−', modulo: 'irpef.js',
+      valore: r.irpefLorda, segno: '−',
       note: `media ${percentuale(d.irpef.aliquotaMedia)}`,
       passi: d.irpef.scaglioni.map((s) => ({
-        titolo: `Scaglione ${s.etichetta} — ${percentuale(s.aliquota, 0)}`,
+        titolo: `Scaglione ${s.etichetta} - ${percentuale(s.aliquota, 0)}`,
         formula: `${euro(s.quotaTassata)} × ${percentuale(s.aliquota, 0)} = ${euro(s.imposta)}`,
         spiegazione: '',
       })),
@@ -264,7 +344,7 @@ function disegnaRisultato(r) {
 
     rigaVoce({
       etichetta: 'Detrazioni sull\'imposta',
-      valore: r.detrazioniTotali, segno: '+', modulo: 'detrazioni-lavoro-dipendente.js',
+      valore: r.detrazioniTotali, segno: '+',
       note: r.detrazioniNonSfruttate > 0 ? `${euroTondo(r.detrazioniNonSfruttate)} non sfruttate` : '',
       passi: [
         ...d.detrazioneLavoro.passi,
@@ -282,7 +362,7 @@ function disegnaRisultato(r) {
 
     rigaVoce({
       etichetta: 'IRPEF netta',
-      valore: r.irpefNetta, segno: '−', modulo: 'calcola-netto.js', evidenza: true,
+      valore: r.irpefNetta, segno: '−', evidenza: true,
       passi: [{
         titolo: 'Imposta effettivamente dovuta',
         formula: `max(0 ; ${euro(r.irpefLorda)} − ${euro(r.detrazioniTotali)}) = ${euro(r.irpefNetta)}`,
@@ -294,26 +374,26 @@ function disegnaRisultato(r) {
     }),
 
     rigaVoce({
-      etichetta: `Addizionale regionale${r.input.regione ? ` — ${r.input.regione.nome}` : ''}`,
-      valore: r.addizionaleRegionale, segno: '−', modulo: 'addizionali.js',
+      etichetta: `Addizionale regionale${r.input.regione ? ` - ${r.input.regione.nome}` : ''}`,
+      valore: r.addizionaleRegionale, segno: '−',
       passi: d.addizionaleRegionale.passi,
     }),
 
     rigaVoce({
-      etichetta: `Addizionale comunale${comuneScelto ? ` — ${comuneScelto.nome}` : ''}`,
-      valore: r.addizionaleComunale, segno: '−', modulo: 'addizionali.js',
+      etichetta: `Addizionale comunale${comuneScelto ? ` - ${comuneScelto.nome}` : ''}`,
+      valore: r.addizionaleComunale, segno: '−',
       passi: d.addizionaleComunale.passi,
     }),
 
     rigaVoce({
       etichetta: 'Trattamento integrativo',
-      valore: r.trattamentoIntegrativo, segno: '+', modulo: 'trattamento-integrativo.js',
+      valore: r.trattamentoIntegrativo, segno: '+',
       passi: d.trattamentoIntegrativo.passi,
     }),
 
     rigaVoce({
       etichetta: 'Somma integrativa cuneo fiscale',
-      valore: r.sommaCuneo, segno: '+', modulo: 'cuneo-fiscale.js',
+      valore: r.sommaCuneo, segno: '+',
       passi: d.sommaCuneo.passi.length ? d.sommaCuneo.passi : [{
         titolo: 'Non spettante',
         formula: `reddito complessivo ${euro(r.redditoComplessivo)} oltre 20.000 €`,
@@ -324,7 +404,7 @@ function disegnaRisultato(r) {
 
     rigaVoce({
       etichetta: 'Netto annuo',
-      valore: r.nettoAnnuo, segno: '=', modulo: 'calcola-netto.js', evidenza: true,
+      valore: r.nettoAnnuo, segno: '=', evidenza: true, finale: true,
       passi: [{
         titolo: 'Chiusura del conto',
         formula: `${euro(r.ral)} − ${euro(r.totaleTrattenute)} + ${euro(r.totaleErogazioni)}`
@@ -343,7 +423,7 @@ function disegnaRisultato(r) {
     ? `<h3>Cosa dice la delibera regionale</h3>
        <blockquote>${testoSicuro(disposizione)}</blockquote>
        <p class="minuta">Testo integrale dal CSV del Dipartimento delle Finanze. Le agevolazioni
-       descritte a parole non sono applicate automaticamente dal calcolo: verificale qui.</p>`
+       descritte a parole non sono applicate automaticamente dal calcolatore.</p>`
     : '';
 
   /* --- Curva ------------------------------------------------------- */
@@ -370,38 +450,20 @@ function disegnaCurva(r) {
  * ------------------------------------------------------------------ */
 
 function disegnaSemplificazioni() {
-  const ordine = { alto: 0, medio: 1, basso: 2 };
-  const voci = [...SEMPLIFICAZIONI].sort((a, b) => ordine[a.impatto] - ordine[b.impatto]);
-
-  $('#semplificazioni').innerHTML = voci.map((s) => `
-    <details class="semplificazione impatto-${s.impatto}">
+  $('#semplificazioni').innerHTML = SEMPLIFICAZIONI.map((s) => `
+    <details class="semplificazione">
       <summary>
-        <span class="etichetta-tipo">${s.tipo === 'divergenza-fonti' ? 'Fonti discordi' : 'Semplificazione'}</span>
         <span class="semplificazione-titolo">${testoSicuro(s.titolo)}</span>
-        <span class="etichetta-impatto">impatto ${s.impatto}</span>
       </summary>
       <p>${testoSicuro(s.descrizione)}</p>
-      <p class="voce-modulo">In <code>${testoSicuro(s.modulo)}</code></p>
     </details>`).join('');
 
-  const alti = SEMPLIFICAZIONI.filter((s) => s.impatto === 'alto').length;
   $('#conteggio-semplificazioni').textContent =
-    `${SEMPLIFICAZIONI.length} voci dichiarate, di cui ${alti} con impatto rilevante`;
+    `${SEMPLIFICAZIONI.length} voci dichiarate`;
 }
 
-function disegnaParametri() {
-  $('#parametri').innerHTML = `
-    <dl class="parametri">
-      <div><dt>Scaglioni IRPEF</dt><dd>${IRPEF.scaglioni
-        .map((s) => `${percentuale(s.aliquota, 0)} ${s.fino === Infinity
-          ? `oltre ${euroTondo(s.da)}` : `fino a ${euroTondo(s.fino)}`}`).join(' · ')}</dd></div>
-      <div><dt>Aliquota INPS lavoratore</dt><dd>${percentuale(INPS.aliquotaLavoratore, 2)}
-        (${percentuale(INPS.aliquotaApprendista, 2)} apprendisti)</dd></div>
-      <div><dt>Prima fascia INPS</dt><dd>${euroTondo(INPS.primaFasciaAnnua)} — oltre, +1%</dd></div>
-      <div><dt>Massimale contributivo</dt><dd>${euroTondo(INPS.massimaleAnnuo)}</dd></div>
-      <div><dt>Aliquote addizionali</dt><dd>CSV ufficiale MEF, scaricato il ${SCARICATO_IL}</dd></div>
-    </dl>`;
-
+/** L'unico parametro esposto nell'interfaccia: la fonte delle addizionali. */
+function collegaFonti() {
   $('#fonte-regionale').href = FONTE_REGIONALE;
 }
 
@@ -428,7 +490,7 @@ function calcolaEDisegna() {
 function avvia() {
   popolaRegioni();
   disegnaSemplificazioni();
-  disegnaParametri();
+  collegaFonti();
   caricaComuni();
 
   $('#modulo').addEventListener('submit', (evento) => {
@@ -447,9 +509,43 @@ function avvia() {
     if (!$('#risultato').hidden) calcolaEDisegna();
   });
 
-  $('#comune').addEventListener('input', () => {
-    aggiornaSuggerimenti();
-    if (risolviComuneDigitato() && !$('#risultato').hidden) calcolaEDisegna();
+  // L'interruttore delle unità sta fuori dal modulo: il ciclo generico in fondo
+  // a questa funzione non lo raggiunge, e vuole un aggancio dedicato. Ridisegna
+  // solo le cifre, che sono le sole a cambiare unità.
+  $('#unita-token').addEventListener('change', () => {
+    if (!$('#risultato').hidden) calcolaEDisegna();
+  });
+
+  $('#comune').addEventListener('input', aggiornaSuggerimenti);
+
+  $('#comune').addEventListener('keydown', (evento) => {
+    if (evento.key === 'ArrowDown') {
+      evento.preventDefault();
+      if ($('#lista-comuni').hidden) { aggiornaSuggerimenti(); return; }
+      evidenziaSuggerimento(Math.min(indiceEvidenziato + 1, suggerimentiCorrenti.length - 1));
+    } else if (evento.key === 'ArrowUp') {
+      evento.preventDefault();
+      evidenziaSuggerimento(Math.max(indiceEvidenziato - 1, 0));
+    } else if (evento.key === 'Enter' && indiceEvidenziato >= 0) {
+      // Con una voce evidenziata l'invio la conferma, invece di inviare il modulo.
+      evento.preventDefault();
+      confermaSuggerimento(indiceEvidenziato);
+    } else if (evento.key === 'Escape') {
+      nascondiSuggerimenti();
+    }
+  });
+
+  // mousedown (non click): scatta prima del blur dell'input, altrimenti la
+  // tendina si chiuderebbe per il blur ancora prima che il click la raggiunga.
+  $('#lista-comuni').addEventListener('mousedown', (evento) => {
+    const voce = evento.target.closest('.suggerimento');
+    if (!voce) return;
+    evento.preventDefault();
+    confermaSuggerimento(Number(voce.dataset.indice));
+  });
+
+  $('#comune').addEventListener('blur', () => {
+    setTimeout(nascondiSuggerimenti, 120);
   });
 
   // Ogni altra modifica ricalcola, ma solo dopo il primo "Calcola".
@@ -458,6 +554,23 @@ function avvia() {
     campo.addEventListener('change', () => {
       if (!$('#risultato').hidden) calcolaEDisegna();
     });
+  }
+
+  disattivaRotellinaSuiCampiNumerici();
+}
+
+/**
+ * Il browser, di serie, incrementa o decrementa un <input type="number">
+ * quando ci si scorre sopra con la rotellina del mouse mentre ha il focus —
+ * un comportamento facile da attivare per sbaglio (basta scorrere la pagina
+ * col cursore fermo su un campo appena cliccato) e che altera un valore
+ * senza che l'utente se ne accorga. Lo disattiviamo togliendo il focus dal
+ * campo appena parte lo scroll: la rotellina torna a scorrere la pagina, non
+ * il numero, e il campo resta comunque modificabile normalmente da tastiera.
+ */
+function disattivaRotellinaSuiCampiNumerici() {
+  for (const campo of document.querySelectorAll('#modulo input[type="number"]')) {
+    campo.addEventListener('wheel', () => campo.blur(), { passive: true });
   }
 }
 

@@ -105,20 +105,11 @@ scostamento dalla busta paga reale, con l'impatto stimato. L'interfaccia legge
 quel file e lo mostra in fondo alla pagina: **se implementi una di quelle regole,
 cancella la voce dal file** e sparisce anche dal sito.
 
-Il registro comprende anche tre punti in cui i documenti di partenza in
-[`docs/`](docs/) si contraddicono e ho dovuto scegliere:
-
-| Punto | Documenti | Scelta |
-|---|---|---|
-| Seconda aliquota IRPEF | `aliquote-irpef.md` dice 33%, il documento sul trattamento integrativo dice 35% | **33%** — fonte specifica dell'Agenzia delle Entrate sulle aliquote 2026 |
-| Trattamento integrativo fra 15.000 e 28.000 € | il §4.2 definisce `detrazioni − imposta lorda`, la tabella del §6 calcola l'inverso | **il §4.2**, conforme all'art. 1 c. 1 del D.L. 3/2020 |
-| Somma integrativa del cuneo | descritta sia come "quota esclusa dal reddito" sia come "somma esentasse" | **somma erogata in aggiunta al netto**, come dice il testo della L. 207/2024 |
-
-La seconda scelta ha una conseguenza pratica controintuitiva: con la sola
-detrazione da lavoro dipendente, fra 15.000 e 28.000 € il trattamento integrativo
-**non spetta**. Spetta solo se altre detrazioni (familiari a carico, mutuo, spese
-sanitarie) superano l'imposta lorda. È il comportamento corretto secondo la norma,
-ed è quello che si osserva nelle buste paga reali.
+Un risultato che sorprende, ma è corretto: il trattamento integrativo fra 15.000 e
+28.000 € vale `detrazioni − imposta lorda` (art. 1 c. 1 del D.L. 3/2020), quindi con
+la sola detrazione da lavoro dipendente **non spetta**. Spetta solo se altre detrazioni
+(familiari a carico, mutuo, spese sanitarie) superano l'imposta lorda. È quello che si
+osserva nelle buste paga reali.
 
 ---
 
@@ -145,7 +136,7 @@ index.html                  pagina unica
 src/stile.css               palette e layout (tema chiaro e scuro)
 src/calcolo/                le regole fiscali — un file per regola
 src/dati/                   aliquote generate dai CSV ufficiali
-src/ui/                     modulo, grafici SVG, formattazione
+src/ui/                     modulo, grafici SVG, formattazione, unità di misura
 strumenti/                  script di aggiornamento dati e server locale
 test/                       suite di test
 docs/                       i documenti normativi usati come fonte

@@ -2,66 +2,54 @@
  * STILE
  * =====
  * Palette definita una sola volta come variabili, così i grafici SVG e la
- * pagina restano coerenti e il tema scuro è una sola riscrittura di token.
+ * pagina restano coerenti.
+ *
+ * Due accenti, con una divisione di ruoli precisa:
+ *   oro (--accento)   → ciò che AGISCE: controlli, link, focus, il pulsante.
+ *   smeraldo (--netto)→ ciò che RESTA: il netto, i totali, la curva, i risultati.
+ * Il rosso (--trattenuta) è ciò che viene mietuto via. Tenere separati i tre
+ * ruoli è ciò che rende leggibile un colpo d'occhio su fondo scuro.
  */
 
 :root {
-  color-scheme: light dark;
+  color-scheme: dark;
 
-  /* Superfici */
-  --sfondo: #faf8f5;
-  --sfondo-alto: #ffffff;
-  --sfondo-tenue: #f2efe9;
-  --bordo: #e3ded4;
-  --bordo-forte: #cfc7b8;
+  /* Superfici — crepuscolo su un campo mietuto */
+  --sfondo: #15130f;
+  --sfondo-alto: #1e1b15;
+  --sfondo-tenue: #27221a;
+  --bordo: #3a3327;
+  --bordo-forte: #52493a;
 
   /* Testo */
-  --testo: #1c1a17;
-  --testo-tenue: #6b655c;
-  --testo-minuto: #8d8578;
+  --testo: #f2ece0;
+  --testo-tenue: #b3a891;
+  --testo-minuto: #9a9080;
 
   /* Semantica del calcolo */
-  --netto: #1f6f4a;          /* ciò che resta */
-  --netto-tenue: #d8ebe0;
-  --trattenuta: #a8362c;     /* ciò che se ne va */
-  --trattenuta-tenue: #f3ddd9;
-  --erogazione: #2f6f8f;     /* ciò che viene aggiunto */
-  --erogazione-tenue: #dceaf1;
-  --neutro: #4a453d;
+  --netto: #35d39b;          /* smeraldo: ciò che resta, il raccolto */
+  --netto-tenue: #12352a;
+  --netto-velo: rgba(53, 211, 155, .12);
+  --trattenuta: #d16c5c;     /* ciò che la falce porta via */
+  --trattenuta-tenue: #3a231c;
+  --trattenuta-chiara: #e5917f;   /* barre degli scaglioni: chiara, per reggere testo scuro sopra */
+  --erogazione: #45b4c4;     /* ciano: ciò che viene aggiunto da fuori la RAL */
+  --erogazione-tenue: #123037;
+  --neutro: #9b9384;
 
-  --accento: #8a5a2b;
+  --accento: #dba64b;        /* oro grano — la lama */
+  --accento-velo: rgba(219, 166, 75, .13);
+  --inchiostro: #1a1509;     /* testo scuro da posare sopra oro e smeraldo */
+
+  --ombra: 0 18px 40px rgba(0, 0, 0, .45);
 
   --raggio: 10px;
   --raggio-piccolo: 6px;
   --larghezza: 1080px;
 
   --serif: 'Instrument Serif', Georgia, 'Times New Roman', serif;
-  --sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Consolas, monospace;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --sfondo: #15140f;
-    --sfondo-alto: #1e1c17;
-    --sfondo-tenue: #26231d;
-    --bordo: #35312a;
-    --bordo-forte: #4a453c;
-
-    --testo: #f0ece4;
-    --testo-tenue: #a9a294;
-    --testo-minuto: #837c6e;
-
-    --netto: #6cc296;
-    --netto-tenue: #1e3a2c;
-    --trattenuta: #e08a80;
-    --trattenuta-tenue: #3a231f;
-    --erogazione: #7db9d6;
-    --erogazione-tenue: #1c3340;
-    --neutro: #9b9384;
-
-    --accento: #d9a066;
-  }
+  --sans: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono: ui-monospace, 'SF Mono', 'Cascadia Mono', Consolas, monospace;
 }
 
 * { box-sizing: border-box; }
@@ -74,7 +62,21 @@ body {
   font-size: 16px;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  scrollbar-color: var(--bordo-forte) var(--sfondo);
 }
+
+::selection { background: var(--netto); color: var(--inchiostro); }
+
+::-webkit-scrollbar { width: 12px; height: 12px; }
+::-webkit-scrollbar-track { background: var(--sfondo); }
+
+::-webkit-scrollbar-thumb {
+  border: 3px solid var(--sfondo);
+  border-radius: 8px;
+  background: var(--bordo-forte);
+}
+
+::-webkit-scrollbar-thumb:hover { background: var(--testo-minuto); }
 
 .contenuto {
   max-width: var(--larghezza);
@@ -87,9 +89,66 @@ body {
  * ---------------------------------------------------------------- */
 
 .intestazione {
-  padding: 72px 0 44px;
+  position: relative;
+  padding: 40px 0 44px;
   border-bottom: 1px solid var(--bordo);
-  background: linear-gradient(180deg, var(--sfondo-alto), var(--sfondo));
+  background:
+    radial-gradient(120% 90% at 12% 0%, var(--accento-velo), transparent 62%),
+    radial-gradient(100% 80% at 88% 8%, var(--netto-velo), transparent 60%),
+    linear-gradient(180deg, var(--sfondo-alto), var(--sfondo));
+}
+
+/* Il filo sotto la testata attraversa i due accenti: oro a sinistra da dove
+   arriva la lama, smeraldo a destra dove resta il raccolto. */
+.intestazione::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 1px;
+  background: linear-gradient(90deg, var(--accento), transparent 45%, var(--netto) 92%);
+}
+
+.marchio {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin: 0 0 30px;
+}
+
+/* Lo sprite in cima al documento definisce il simbolo, non deve occupare
+   spazio né essere letto. */
+.sprite {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+
+.marchio-icona {
+  flex: none;
+  width: 22px;
+  height: 25px;
+  filter: drop-shadow(0 0 10px var(--accento-velo));
+}
+
+/* Nel titolo la falce chiude la frase come un segno di punteggiatura: alta
+   quanto le maiuscole del serif e posata sulla stessa linea di base. */
+.titolo-icona {
+  width: .68em;    /* .78em di altezza per il rapporto del disegno */
+  height: .78em;   /* la falce e' piu' aperta: regge qualche punto in piu' */
+  margin-left: .18em;
+  vertical-align: -.04em;
+  filter: drop-shadow(0 0 18px var(--accento-velo));
+}
+
+.marchio-testo {
+  color: var(--testo);
+  font-family: var(--sans);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: .05em;
+  text-transform: uppercase;
 }
 
 .occhiello {
@@ -108,6 +167,13 @@ h1 {
   font-weight: 400;
   line-height: 1.02;
   letter-spacing: -.015em;
+}
+
+/* "netto" è la parola che l'intero strumento serve a ottenere: porta il colore
+   che nel resto della pagina significa sempre e solo "ciò che resta". */
+h1 em {
+  color: var(--netto);
+  font-style: italic;
 }
 
 .sottotitolo {
@@ -130,7 +196,10 @@ h1 {
   padding: 30px;
   border: 1px solid var(--bordo);
   border-radius: var(--raggio);
-  background: var(--sfondo-alto);
+  background:
+    radial-gradient(70% 130% at 100% 0%, var(--accento-velo), transparent 58%),
+    var(--sfondo-alto);
+  box-shadow: var(--ombra);
 }
 
 .campo { display: flex; flex-direction: column; gap: 7px; min-width: 0; margin: 0; padding: 0; border: 0; }
@@ -156,7 +225,72 @@ input[type="number"], input[type="text"], select {
   font-family: var(--sans);
   font-size: 15px;
   font-variant-numeric: tabular-nums;
+  transition: border-color .12s, background .12s;
 }
+
+input[type="number"]:hover, input[type="text"]:hover, select:hover { border-color: var(--testo-minuto); }
+
+select {
+  appearance: none;
+  padding-right: 34px;
+  background-image: linear-gradient(45deg, transparent 50%, var(--accento) 50%),
+                    linear-gradient(135deg, var(--accento) 50%, transparent 50%);
+  background-repeat: no-repeat;
+  background-position: right 17px center, right 12px center;
+  background-size: 5px 5px, 5px 5px;
+  cursor: pointer;
+}
+
+/* La tendina nativa si apre con i colori del sistema: qui le opzioni sono
+   ridipinte perché su Windows resterebbero bianche dentro una pagina scura. */
+select option { background: var(--sfondo-alto); color: var(--testo); }
+
+/* Ricerca del comune: tendina propria, non il datalist nativo del browser. */
+.comune-ricerca { position: relative; }
+
+.suggerimenti {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 5px);
+  left: 0;
+  right: 0;
+  max-height: 280px;
+  margin: 0;
+  padding: 6px;
+  overflow-y: auto;
+  border: 1px solid var(--bordo-forte);
+  border-radius: var(--raggio-piccolo);
+  background: var(--sfondo-alto);
+  box-shadow: var(--ombra);
+  list-style: none;
+}
+
+.suggerimenti[hidden] { display: none; }
+
+.suggerimento {
+  padding: 9px 12px;
+  border-radius: 5px;
+  color: var(--testo);
+  font-size: 14.5px;
+  cursor: pointer;
+}
+
+.suggerimento:hover { background: var(--sfondo-tenue); }
+
+/* La voce raggiunta con le frecce va distinta dal semplice hover del mouse:
+   qui è l'unica che sta per essere confermata da Invio. */
+.suggerimento.attivo {
+  background: var(--netto-tenue);
+  box-shadow: inset 2px 0 0 var(--netto);
+}
+
+.suggerimento .suggerimento-provincia {
+  margin-left: 5px;
+  color: var(--testo-minuto);
+  font-size: 12.5px;
+}
+
+.suggerimento-vuoto { padding: 10px 12px; color: var(--testo-minuto); font-size: 13.5px; }
 
 input:focus-visible, select:focus-visible, button:focus-visible, summary:focus-visible {
   outline: 2px solid var(--accento);
@@ -230,10 +364,13 @@ input[type="range"]::-moz-range-thumb {
   transition: background .12s, border-color .12s, color .12s;
 }
 
+.segmenti span:hover { border-color: var(--testo-minuto); }
+
 .segmenti input:checked + span {
   border-color: var(--accento);
   background: var(--accento);
-  color: var(--sfondo-alto);
+  color: var(--inchiostro);
+  font-weight: 600;
 }
 
 /* Interruttori */
@@ -264,8 +401,21 @@ input[type="range"]::-moz-range-thumb {
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  list-style-position: inside;
+  list-style: none;
 }
+
+.campo-famiglia > summary::-webkit-details-marker { display: none; }
+
+.campo-famiglia > summary::before {
+  content: '›';
+  display: inline-block;
+  width: 14px;
+  color: var(--accento);
+  font-size: 15px;
+  transition: transform .15s;
+}
+
+.campo-famiglia[open] > summary::before { transform: rotate(90deg); }
 
 .griglia-famiglia {
   display: grid;
@@ -282,35 +432,114 @@ input[type="range"]::-moz-range-thumb {
   padding: 14px 28px;
   border: 0;
   border-radius: var(--raggio-piccolo);
-  background: var(--testo);
-  color: var(--sfondo);
+  background: var(--accento);
+  color: var(--inchiostro);
   font-family: var(--sans);
   font-size: 16px;
   font-weight: 600;
+  letter-spacing: .02em;
   cursor: pointer;
-  transition: opacity .12s;
+  box-shadow: 0 0 0 0 var(--accento-velo);
+  transition: filter .12s, box-shadow .16s;
 }
 
-.bottone-calcola:hover { opacity: .86; }
+/* La glossa sta sotto la parola grossa: dice in prosa quello che il bottone fa,
+   per chi non ha voglia di indovinare la metafora. */
+.bottone-calcola__glossa {
+  display: block;
+  margin-top: 2px;
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: .04em;
+  opacity: .72;
+}
+
+.bottone-calcola:hover { filter: brightness(1.08); box-shadow: 0 0 0 5px var(--accento-velo); }
+.bottone-calcola:active { filter: brightness(.94); }
 
 .nota { margin: 0; color: var(--testo-minuto); font-size: 12.5px; line-height: 1.45; }
-.nota-stato { grid-column: 1 / -1; }
-.nota-stato.in-caricamento { font-style: italic; }
-.nota-stato.errore { color: var(--trattenuta); }
+
+/* ---------------------------------------------------------------- *
+ * Interruttore euro / token
+ * ---------------------------------------------------------------- */
+
+.unita {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 44px;
+}
+
+/* L'interruttore si appoggia sopra le cifre: la distanza grande resta una
+   sola, quella che l'interruttore ha già preso qui sopra. */
+.unita + .cifre { margin-top: 12px; }
+
+.scambio {
+  display: inline-flex;
+  gap: 10px;
+  align-items: center;
+  align-self: flex-start;
+  font-size: 13.5px;
+  cursor: pointer;
+  user-select: none;
+}
+
+/* La casella vera resta nel DOM per tastiera e lettori di schermo, ma non si
+   vede: al suo posto si guarda la leva qui sotto. */
+.scambio input { position: absolute; opacity: 0; pointer-events: none; }
+
+.scambio-voce { color: var(--testo-minuto); transition: color .14s; }
+
+/* Il lato attivo è quello dorato: la posizione della leva da sola, a un'occhiata
+   veloce, si legge male. */
+.scambio:has(input:not(:checked)) .scambio-voce:first-child,
+.scambio:has(input:checked) .scambio-voce:last-child {
+  color: var(--accento);
+  font-weight: 500;
+}
+
+.scambio-leva {
+  position: relative;
+  flex: 0 0 auto;
+  width: 38px;
+  height: 21px;
+  border: 1px solid var(--bordo-forte);
+  border-radius: 999px;
+  background: var(--sfondo);
+  transition: background .14s, border-color .14s;
+}
+
+.scambio-leva::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--accento);
+  transition: transform .14s;
+}
+
+.scambio input:checked + .scambio-leva { border-color: var(--accento); }
+.scambio input:checked + .scambio-leva::after { transform: translateX(17px); }
+.scambio input:focus-visible + .scambio-leva { box-shadow: 0 0 0 3px var(--accento-velo); }
+.scambio:hover .scambio-leva { border-color: var(--testo-minuto); }
 
 /* ---------------------------------------------------------------- *
  * Cifre principali
  * ---------------------------------------------------------------- */
 
+/* Le celle portano da sé la linea di separazione (box-shadow di 1px): così una
+   riga incompleta lascia vedere lo sfondo pagina invece di un riquadro vuoto
+   del colore dei bordi. */
 .cifre {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 1px;
   margin: 44px 0 12px;
   overflow: hidden;
-  border: 1px solid var(--bordo);
   border-radius: var(--raggio);
-  background: var(--bordo);
 }
 
 .cifra {
@@ -319,9 +548,29 @@ input[type="range"]::-moz-range-thumb {
   gap: 4px;
   padding: 24px 22px;
   background: var(--sfondo-alto);
+  box-shadow: 0 0 0 1px var(--bordo);
 }
 
-.cifra-principale { background: var(--netto-tenue); }
+.cifra-principale {
+  position: relative;
+  background:
+    radial-gradient(90% 120% at 0% 0%, var(--netto-velo), transparent 70%),
+    var(--netto-tenue);
+  box-shadow: 0 0 0 1px var(--netto-tenue);
+}
+
+.cifra-principale::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 3px;
+  background: var(--netto);
+}
+
+.cifra-principale .cifra-etichetta { color: var(--netto); }
+.cifra-principale .cifra-sotto { color: var(--testo-tenue); }
 
 .cifra-etichetta {
   color: var(--testo-tenue);
@@ -342,6 +591,15 @@ input[type="range"]::-moz-range-thumb {
 .cifra-principale .cifra-valore { color: var(--netto); }
 .cifra-sotto { color: var(--testo-minuto); font-size: 13px; }
 
+/* In token ogni cifra vale due riquadri, input e output: due colonne fisse li
+   tengono appaiati sulla stessa riga, che è il solo modo di confrontarli.
+   Va dopo .cifre, non prima: stessa specificità, vince l'ultima scritta. */
+.cifre-token { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+/* I numeri per esteso sono lunghi: la cifra scende di corpo per starci dentro
+   senza spezzarsi a metà. */
+.cifra-token .cifra-valore { font-size: clamp(1.35rem, 2.6vw, 1.85rem); }
+
 /* ---------------------------------------------------------------- *
  * Blocchi
  * ---------------------------------------------------------------- */
@@ -349,11 +607,26 @@ input[type="range"]::-moz-range-thumb {
 .blocco { margin: 56px 0; }
 
 .blocco h2 {
+  position: relative;
   margin: 0 0 8px;
+  padding-left: 18px;
   font-family: var(--serif);
   font-size: clamp(1.6rem, 3vw, 2.1rem);
   font-weight: 400;
   letter-spacing: -.01em;
+}
+
+/* Tacca smeraldo: dà un attacco visivo alla sezione senza aggiungere peso
+   tipografico, e ripete l'accento del titolo principale. */
+.blocco h2::before {
+  content: '';
+  position: absolute;
+  top: .28em;
+  bottom: .28em;
+  left: 0;
+  width: 3px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, var(--netto), transparent);
 }
 
 .introduzione {
@@ -381,40 +654,131 @@ input[type="range"]::-moz-range-thumb {
 .asse-titolo-netto { fill: var(--netto); }
 .asse-titolo-pressione { fill: var(--trattenuta); }
 
-/* Cascata */
-.cascata-connettore { stroke: var(--bordo-forte); stroke-width: 1; stroke-dasharray: 3 3; }
+/* Ripartizione della RAL — torta a ciambella + legenda numerica */
 
-.cascata-voce rect { transition: opacity .12s; }
-.cascata-voce:hover rect { opacity: .78; }
+.ral-vista {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 32px;
+  align-items: center;
+}
 
-.cascata-totale rect { fill: var(--neutro); }
-.cascata-voce:last-child rect { fill: var(--netto); }
-.cascata-trattenuta rect { fill: var(--trattenuta); }
-.cascata-erogazione rect { fill: var(--erogazione); }
+.grafico-torta-ral {
+  flex: none;
+  width: 220px;
+  height: 220px;
+  filter: drop-shadow(0 8px 22px rgba(0, 0, 0, .4));
+}
 
-.cascata-valore {
-  fill: var(--testo);
+/* Scala di rossi esplicita, non un'opacità decrescente: su fondo scuro
+   abbassare l'opacità spegne la tinta verso il grigio-marrone invece di
+   schiarirla, e le quattro trattenute diventavano indistinguibili.
+   Ogni fetta porta la propria tinta in --tinta, così il pallino della legenda
+   la riusa senza duplicare la scala. */
+.fetta-ral-inps { --tinta: #a83f36; }
+.fetta-ral-irpef { --tinta: #c25a48; }
+.fetta-ral-regionale { --tinta: #d97a63; }
+.fetta-ral-comunale { --tinta: #eda184; }
+.fetta-ral-netto { --tinta: var(--netto); }
+
+.fetta-ral {
+  stroke: var(--sfondo);
+  stroke-width: 2;
+  fill: var(--tinta);
+  transition: filter .12s;
+}
+
+.fetta-ral:hover { filter: brightness(1.2); }
+
+.torta-centro-etichetta {
+  fill: var(--testo-minuto);
   font-family: var(--sans);
   font-size: 12px;
+}
+
+.torta-centro-valore {
+  fill: var(--testo);
+  font-family: var(--sans);
+  font-size: 17px;
   font-weight: 600;
-  text-anchor: middle;
   font-variant-numeric: tabular-nums;
 }
 
-.cascata-etichetta {
-  fill: var(--testo-tenue);
-  font-family: var(--sans);
-  font-size: 11px;
-  text-anchor: middle;
+.ral-legenda {
+  flex: 1 1 300px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
+.ral-legenda li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  align-items: baseline;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--bordo);
+}
+
+.ral-legenda li:last-child { border-bottom: 0; }
+
+/* La riga del netto è la conclusione della lista, non una voce come le altre. */
+.ral-legenda li:has(.fetta-ral-netto) .legenda-fascia,
+.ral-legenda li:has(.fetta-ral-netto) .legenda-imposta { color: var(--netto); font-weight: 600; }
+
+.legenda-pallino {
+  flex: none;
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+  background: var(--tinta);
+  align-self: center;
+}
+
+.legenda-fascia { flex: 1 1 160px; font-size: 14px; font-weight: 500; }
+
+.legenda-numeri {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 2px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.legenda-quota { color: var(--testo-tenue); font-size: 12.5px; }
+.legenda-imposta { font-size: 14px; font-weight: 600; }
+
+.ral-nota-erogazioni {
+  max-width: 62ch;
+  margin: 18px 0 0;
+  padding: 13px 16px;
+  border-left: 3px solid var(--erogazione);
+  border-radius: 0 var(--raggio-piccolo) var(--raggio-piccolo) 0;
+  background: var(--erogazione-tenue);
+  color: var(--testo-tenue);
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+
+.ral-nota-erogazioni strong { color: var(--testo); }
+
 /* Curva */
-.curva-area { fill: var(--netto); opacity: .10; }
-.curva-netto { fill: none; stroke: var(--netto); stroke-width: 2.5; stroke-linejoin: round; }
+.velo-netto-alto { stop-color: var(--netto); stop-opacity: .26; }
+.velo-netto-basso { stop-color: var(--netto); stop-opacity: .02; }
+
+.curva-area { fill: url(#velo-netto); }
+.curva-netto {
+  fill: none;
+  stroke: var(--netto);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 6px var(--netto-velo));
+}
 .curva-pressione { fill: none; stroke: var(--trattenuta); stroke-width: 2; stroke-dasharray: 5 4; }
 
 .marcatore-linea { stroke: var(--accento); stroke-width: 1.5; stroke-dasharray: 4 4; }
-.marcatore-punto { fill: var(--netto); stroke: var(--sfondo-alto); stroke-width: 2.5; }
+.marcatore-punto { fill: var(--netto); stroke: var(--sfondo); stroke-width: 2.5; }
 .marcatore-pressione { fill: var(--trattenuta); }
 
 .legenda { display: flex; flex-wrap: wrap; gap: 22px; margin-top: 14px; }
@@ -437,7 +801,9 @@ input[type="range"]::-moz-range-thumb {
 .legenda-pressione::before { background: repeating-linear-gradient(90deg, var(--trattenuta) 0 5px, transparent 5px 9px); }
 
 /* Scaglioni */
-.scaglione-barra { fill: var(--trattenuta); opacity: calc(.45 + var(--aliquota)); }
+/* Su fondo scuro un'opacità bassa scurisce la barra: la scala parte alta,
+   così l'etichetta scura al suo interno resta leggibile anche sullo scaglione minore. */
+.scaglione-barra { fill: var(--trattenuta-chiara); opacity: calc(.72 + var(--aliquota) * .65); }
 .scaglione:hover .scaglione-barra { opacity: 1; }
 
 .scaglione-fascia { fill: var(--testo-tenue); font-family: var(--sans); font-size: 12.5px; }
@@ -449,15 +815,23 @@ input[type="range"]::-moz-range-thumb {
   font-weight: 600;
 }
 
+/* Quota e imposta stanno su una x fissa (non sulla larghezza della barra),
+   ancorate a destra: così non si scontrano mai, nemmeno con la barra più larga. */
 .scaglione-imposta {
   fill: var(--testo);
   font-family: var(--sans);
   font-size: 13px;
   font-weight: 600;
+  text-anchor: end;
   font-variant-numeric: tabular-nums;
 }
 
-.scaglione-quota { fill: var(--testo-minuto); font-family: var(--sans); font-size: 11.5px; }
+.scaglione-quota {
+  fill: var(--testo-minuto);
+  font-family: var(--sans);
+  font-size: 11.5px;
+  text-anchor: end;
+}
 
 .nota-vuota { color: var(--testo-minuto); font-size: 14px; font-style: italic; }
 
@@ -470,6 +844,7 @@ input[type="range"]::-moz-range-thumb {
   border: 1px solid var(--bordo);
   border-radius: var(--raggio);
   background: var(--sfondo-alto);
+  box-shadow: var(--ombra);
 }
 
 .voce { border-bottom: 1px solid var(--bordo); }
@@ -500,8 +875,17 @@ input[type="range"]::-moz-range-thumb {
 .voce[open] > summary::before { transform: rotate(90deg); }
 
 .voce-etichetta { flex: 1; font-size: 15px; }
+
+/* Le voci di sintesi (RAL, imponibile, IRPEF netta, netto) sono i punti in cui
+   il conto si chiude: le marca lo smeraldo, come i totali altrove. */
 .voce-evidenza .voce-etichetta { font-weight: 600; }
-.voce-evidenza > summary { background: var(--sfondo-tenue); }
+
+.voce-evidenza > summary {
+  background: var(--sfondo-tenue);
+  box-shadow: inset 3px 0 0 var(--netto);
+}
+
+.voce-evidenza > summary::before { color: var(--netto); }
 
 .voce-nota {
   flex: none;
@@ -521,6 +905,15 @@ input[type="range"]::-moz-range-thumb {
 
 .voce-negativa .voce-valore { color: var(--trattenuta); }
 .voce-positiva .voce-valore { color: var(--erogazione); }
+
+/* Ultima riga: il numero per cui esiste tutta la pagina. */
+.voce-finale > summary {
+  background: var(--netto-tenue);
+  box-shadow: inset 3px 0 0 var(--netto);
+}
+
+.voce-finale > summary:hover { background: var(--netto-tenue); filter: brightness(1.25); }
+.voce-finale .voce-valore { color: var(--netto); font-size: 16px; }
 
 .voce-dettaglio {
   padding: 4px 22px 22px 48px;
@@ -558,7 +951,6 @@ input[type="range"]::-moz-range-thumb {
   font-size: 13.5px;
 }
 
-.voce-modulo { margin: 14px 0 0; color: var(--testo-minuto); font-size: 12px; }
 
 code {
   padding: 1px 5px;
@@ -568,7 +960,6 @@ code {
   font-size: .88em;
 }
 
-.voce-modulo code { background: var(--sfondo-alto); }
 
 /* Delibera regionale */
 .disposizione:not(:empty) {
@@ -576,10 +967,12 @@ code {
   padding: 20px 24px;
   border-left: 3px solid var(--accento);
   border-radius: 0 var(--raggio-piccolo) var(--raggio-piccolo) 0;
-  background: var(--sfondo-alto);
+  background:
+    linear-gradient(90deg, var(--accento-velo), transparent 40%),
+    var(--sfondo-alto);
 }
 
-.disposizione h3 { margin: 0 0 10px; font-size: 14px; font-weight: 600; }
+.disposizione h3 { margin: 0 0 10px; color: var(--accento); font-size: 14px; font-weight: 600; }
 
 .disposizione blockquote {
   max-width: 76ch;
@@ -593,14 +986,22 @@ code {
  * Semplificazioni
  * ---------------------------------------------------------------- */
 
-.blocco-semplificazioni { padding-top: 44px; border-top: 1px solid var(--bordo); }
+.blocco-semplificazioni {
+  padding-top: 44px;
+  border-top: 1px solid var(--bordo);
+}
+
+.blocco-semplificazioni .conteggio { color: var(--accento); }
 
 .semplificazione {
   margin-bottom: 8px;
   border: 1px solid var(--bordo);
   border-radius: var(--raggio-piccolo);
   background: var(--sfondo-alto);
+  transition: border-color .12s;
 }
+
+.semplificazione:hover { border-color: var(--bordo-forte); }
 
 .semplificazione > summary {
   display: flex;
@@ -613,24 +1014,18 @@ code {
 }
 
 .semplificazione > summary::-webkit-details-marker { display: none; }
-.semplificazione-titolo { flex: 1; min-width: 220px; font-size: 14.5px; }
 
-.etichetta-tipo, .etichetta-impatto {
+.semplificazione > summary::before {
+  content: '›';
   flex: none;
-  padding: 3px 9px;
-  border-radius: 20px;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: .03em;
-  text-transform: uppercase;
+  width: 10px;
+  color: var(--testo-minuto);
+  font-size: 15px;
+  transition: transform .15s;
 }
 
-.etichetta-tipo { background: var(--sfondo-tenue); color: var(--testo-tenue); }
-
-.impatto-alto .etichetta-tipo { background: var(--trattenuta-tenue); color: var(--trattenuta); }
-
-.etichetta-impatto { background: var(--sfondo-tenue); color: var(--testo-minuto); }
-.impatto-alto .etichetta-impatto { background: var(--trattenuta); color: var(--sfondo-alto); }
+.semplificazione[open] > summary::before { transform: rotate(90deg); }
+.semplificazione-titolo { flex: 1; min-width: 200px; font-size: 14.5px; }
 
 .semplificazione p {
   max-width: 76ch;
@@ -639,61 +1034,101 @@ code {
   font-size: 13.5px;
 }
 
-.semplificazione .voce-modulo { margin: 0 18px 14px; }
-
 /* ---------------------------------------------------------------- *
- * Parametri e fonti
+ * Fonti
  * ---------------------------------------------------------------- */
-
-.parametri {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 1px;
-  margin: 0 0 18px;
-  overflow: hidden;
-  border: 1px solid var(--bordo);
-  border-radius: var(--raggio);
-  background: var(--bordo);
-}
-
-.parametri > div { padding: 16px 18px; background: var(--sfondo-alto); }
-
-.parametri dt {
-  margin-bottom: 4px;
-  color: var(--testo-minuto);
-  font-size: 11.5px;
-  font-weight: 600;
-  letter-spacing: .05em;
-  text-transform: uppercase;
-}
-
-.parametri dd { margin: 0; font-size: 14px; font-variant-numeric: tabular-nums; }
 
 .fonti { margin: 0 0 18px; padding: 0; list-style: none; }
 
 .fonti li {
-  padding: 11px 0;
+  padding: 11px 0 11px 16px;
   border-bottom: 1px solid var(--bordo);
+  border-left: 2px solid transparent;
   font-size: 14px;
+  transition: border-left-color .12s, padding-left .12s;
 }
 
+.fonti li:hover { border-left-color: var(--accento); }
 .fonti li:last-child { border-bottom: 0; }
-.fonti strong { font-weight: 600; }
+.fonti strong { color: var(--testo); font-weight: 600; }
 
-a { color: var(--accento); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+a {
+  color: var(--accento);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  text-decoration-color: color-mix(in srgb, var(--accento) 45%, transparent);
+  transition: text-decoration-color .12s;
+}
+
+a:hover { text-decoration-color: var(--accento); }
 
 /* ---------------------------------------------------------------- *
  * Piede
  * ---------------------------------------------------------------- */
 
 .pie {
+  position: relative;
   margin-top: 72px;
   padding: 34px 0 56px;
   border-top: 1px solid var(--bordo);
-  background: var(--sfondo-alto);
+  background:
+    radial-gradient(80% 140% at 50% 100%, var(--accento-velo), transparent 65%),
+    var(--sfondo-alto);
+}
+
+/* Stesso filo bicolore della testata, specchiato: chiude la pagina come l'ha aperta. */
+.pie::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  right: 0;
+  left: 0;
+  height: 1px;
+  background: linear-gradient(90deg, var(--netto), transparent 55%, var(--accento) 95%);
 }
 
 .pie p { max-width: 72ch; margin: 0; color: var(--testo-minuto); font-size: 13px; }
+
+/* La riga di chiusura: a sinistra l'avvertenza, a destra la firma. */
+.pie-riga {
+  display: flex;
+  gap: 24px;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+/* Firma dell'autore: stessa lama d'oro dei controlli, ma in sordina
+   finché non ci passi sopra. */
+.firma {
+  display: inline-flex;
+  flex: none;
+  gap: 8px;
+  align-items: center;
+  padding: 7px 12px;
+  border: 1px solid var(--bordo);
+  border-radius: 999px;
+  background: var(--sfondo-tenue);
+  color: var(--testo-tenue);
+  text-decoration: none;
+  transition: color .18s ease, border-color .18s ease, background-color .18s ease;
+}
+
+.firma:hover,
+.firma:focus-visible {
+  border-color: var(--accento);
+  background: var(--accento-velo);
+  color: var(--accento);
+}
+
+.firma-icona { flex: none; width: 15px; height: 15px; }
+
+.firma-nome {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: .04em;
+}
 
 /* ---------------------------------------------------------------- *
  * Schermi piccoli
@@ -706,6 +1141,7 @@ a { color: var(--accento); text-decoration-thickness: 1px; text-underline-offset
   .voce > summary { flex-wrap: wrap; padding: 14px 16px; }
   .voce-valore { min-width: auto; }
   .voce-dettaglio { padding: 4px 16px 18px 20px; }
-  .grafico-cascata { min-width: 620px; }
-  #grafico-cascata, #grafico-curva { overflow-x: auto; }
+  #grafico-curva { overflow-x: auto; }
+  .pie-riga { align-items: flex-start; gap: 20px; }
+  .cifre-token { grid-template-columns: 1fr; }
 }

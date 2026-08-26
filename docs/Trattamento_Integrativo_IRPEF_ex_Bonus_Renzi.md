@@ -99,7 +99,7 @@ Nessun trattamento integrativo.
  
 Nota: per RC tra 25.000 € e 35.000 € è prevista un'ulteriore maggiorazione di 65 €, non rapportata al periodo di lavoro (spetta per intero se ricorrono i requisiti reddituali).
  
-Aliquote IRPEF di riferimento (art. 11 TUIR, in vigore dal 2025, confermate per il 2026): **23%** fino a 28.000 €, **35%** da 28.001 € a 50.000 €, **43%** oltre 50.000 €.
+Aliquote IRPEF di riferimento (art. 11 TUIR, in vigore per il 2026): **23%** fino a 28.000 €, **33%** da 28.001 € a 50.000 €, **43%** oltre 50.000 €. Vedi [`aliquote-irpef.md`](aliquote-irpef.md).
  
 ---
  
@@ -140,7 +140,7 @@ Il sostituto d'imposta compensa il credito erogato tramite il modello F24, secon
  
 Il trattamento integrativo è una misura **distinta e cumulabile** con la "somma integrativa" e l'"ulteriore detrazione" introdotte dalla **L. 207/2024, art. 1, commi 4-9** (taglio del cuneo fiscale):
  
-- **RC ≤ 20.000 €**: somma esentasse pari al 7,1% (RC ≤ 8.500 €), 5,3% (8.500–15.000 €) o 4,8% (15.000–20.000 €) del reddito da lavoro dipendente — non forma reddito imponibile;
+- **RC ≤ 20.000 €**: somma esentasse pari al 7,1% (RC ≤ 8.500 €), 5,3% (8.500–15.000 €) o 4,8% (15.000–20.000 €) del reddito da lavoro dipendente, **erogata in aggiunta** alla retribuzione e che non concorre alla formazione del reddito imponibile (non è quindi una deduzione dall'imponibile);
 - **20.000 € < RC ≤ 40.000 €**: ulteriore detrazione dall'imposta lorda di 1.000 € (fino a 32.000 €), decrescente fino ad azzerarsi a 40.000 €.
  
 Le due misure nascono da norme diverse (D.L. 3/2020 il trattamento integrativo; L. 207/2024 la somma/detrazione aggiuntiva) e **nessuna disposizione le rende alternative**: un lavoratore che soddisfa i requisiti di entrambe le riceve entrambe in busta paga. Questa seconda misura non è approfondita in questo documento, che è dedicato specificamente al trattamento integrativo; se utile per il team paghe, può essere prodotta una guida analoga dedicata.

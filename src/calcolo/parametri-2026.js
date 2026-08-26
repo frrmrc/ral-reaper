@@ -23,9 +23,6 @@ export const IRPEF = {
     { da: 50000, fino: Infinity, aliquota: 0.43 },
   ],
   fonte: 'Agenzia delle Entrate — Aliquote e calcolo dell’IRPEF 2026. Vedi docs/aliquote-irpef.md',
-  // ATTENZIONE: docs/Trattamento_Integrativo_IRPEF_ex_Bonus_Renzi.md §5 indica 35%
-  // per il secondo scaglione. Prevale docs/aliquote-irpef.md (fonte specifica 2026).
-  // Vedi semplificazioni.js → 'irpef-secondo-scaglione'.
 };
 
 /* ------------------------------------------------------------------ *

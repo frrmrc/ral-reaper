@@ -5,7 +5,8 @@
       "name": "ral-reaper",
       "runtimeExecutable": "node",
       "runtimeArgs": ["strumenti/server-locale.mjs"],
-      "port": 4173
+      "port": 4173,
+      "autoPort": true
     }
   ]
 }

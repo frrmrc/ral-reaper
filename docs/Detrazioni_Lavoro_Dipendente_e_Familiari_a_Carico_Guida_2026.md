@@ -55,7 +55,7 @@ Detrazione effettiva = (giorni lavorati / 365) × detrazione spettante per fasci
 | Misura | Requisito reddito | Importo |
 |---|---|---|
 | **Trattamento integrativo** (ex bonus Renzi) | Reddito complessivo ≤ 15.000 € e imposta lorda superiore alla detrazione (diminuita di 75 €) | 1.200 €/anno |
-| **Cuneo fiscale strutturale 2026** (L. 199/2025) — quota esclusa dal reddito | Reddito ≤ 20.000 € | Variabile, non concorre alla base imponibile IRPEF né ai contributi INPS |
+| **Cuneo fiscale strutturale 2026** (L. 199/2025) — somma integrativa esentasse | Reddito ≤ 20.000 € | Variabile (percentuale del reddito da lavoro dipendente). Non è una deduzione dall'imponibile: è una somma **erogata in aggiunta** alla retribuzione, che non concorre alla formazione del reddito (L. 207/2024, art. 1, c. 4: "è riconosciuta una somma, che non concorre alla formazione del reddito") |
 | **Cuneo fiscale strutturale 2026** — detrazione aggiuntiva | Reddito tra 20.001 € e 32.000 € (si azzera gradualmente fino a 40.000 €) | Fino a 1.000 €/anno |
 
 ---

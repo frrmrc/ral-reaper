@@ -15,7 +15,6 @@
  *
  * tipo:
  *   'semplificazione' → regola reale che abbiamo scelto di non modellare
- *   'divergenza-fonti' → i documenti in /docs si contraddicono: abbiamo scelto
  */
 
 export const SEMPLIFICAZIONI = [
@@ -95,47 +94,6 @@ export const SEMPLIFICAZIONI = [
     modulo: 'addizionali.js',
   },
   {
-    id: 'cuneo-somma-integrativa',
-    tipo: 'divergenza-fonti',
-    impatto: 'alto',
-    titolo: 'La somma integrativa del cuneo è erogata, non dedotta',
-    descrizione:
-      "I documenti in /docs la descrivono in due modi diversi: 'quota esclusa dal reddito' e "
-      + "'somma esentasse'. Qui è implementata come importo EROGATO IN AGGIUNTA al netto, "
-      + "coerentemente con il testo della norma ('è riconosciuta una somma, che non concorre "
-      + "alla formazione del reddito'). Trattarla come riduzione dell'imponibile darebbe un "
-      + "netto diverso.",
-    modulo: 'cuneo-fiscale.js',
-    fonte: 'L. 207/2024 art. 1 c. 4',
-  },
-  {
-    id: 'irpef-secondo-scaglione',
-    tipo: 'divergenza-fonti',
-    impatto: 'alto',
-    titolo: 'Seconda aliquota IRPEF al 33%, non al 35%',
-    descrizione:
-      "docs/aliquote-irpef.md indica 33% per lo scaglione 28.000–50.000 €; "
-      + "docs/Trattamento_Integrativo_IRPEF_ex_Bonus_Renzi.md §5 indica 35%. Si è scelto il "
-      + "33%, perché proviene dalla pagina dell'Agenzia delle Entrate dedicata alle aliquote "
-      + "2026. Su una RAL di 50.000 € la differenza vale circa 400 € l'anno.",
-    modulo: 'parametri-2026.js',
-  },
-  {
-    id: 'trattamento-integrativo-fascia-intermedia',
-    tipo: 'divergenza-fonti',
-    impatto: 'alto',
-    titolo: 'Fascia 15.000–28.000 €: seguito il testo della norma, non la tabella di esempio',
-    descrizione:
-      "Il documento sul trattamento integrativo si contraddice: il §4.2 definisce il bonus "
-      + "come 'detrazioni − imposta lorda', spettante solo se le detrazioni superano "
-      + "l'imposta; la tabella del §6 calcola invece 'imposta lorda − detrazioni' e attribuisce "
-      + "1.200 € a chi ha 20.000 € di reddito. Vale il §4.2, conforme all'art. 1 c. 1 del "
-      + "D.L. 3/2020. Conseguenza pratica: con la sola detrazione da lavoro dipendente, in "
-      + "questa fascia il trattamento integrativo NON spetta. Spetta se altre detrazioni "
-      + "(familiari, mutuo, spese sanitarie) superano l'imposta lorda.",
-    modulo: 'trattamento-integrativo.js',
-  },
-  {
     id: 'detrazioni-test-trattamento',
     tipo: 'semplificazione',
     impatto: 'medio',
@@ -195,6 +153,3 @@ export const SEMPLIFICAZIONI = [
 
 /** Voci che spostano il risultato in modo rilevante: l'interfaccia le evidenzia. */
 export const SEMPLIFICAZIONI_RILEVANTI = SEMPLIFICAZIONI.filter((s) => s.impatto === 'alto');
-
-/** Le contraddizioni fra i documenti di partenza, risolte esplicitamente. */
-export const DIVERGENZE_FONTI = SEMPLIFICAZIONI.filter((s) => s.tipo === 'divergenza-fonti');

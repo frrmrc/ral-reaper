@@ -15,13 +15,12 @@
  *   20.000 < RC ≤ 40.000 € → ULTERIORE DETRAZIONE: 1.000 € sottratti dall'imposta
  *                            lorda, che decrescono fino a zero fra 32.000 e 40.000 €.
  *
- * Fonte: docs/Trattamento_Integrativo_IRPEF_ex_Bonus_Renzi.md §9
+ * La somma integrativa è EROGATA IN AGGIUNTA al netto, non dedotta dall'imponibile:
+ * la norma dice "è riconosciuta una somma, che non concorre alla formazione del
+ * reddito" (L. 207/2024 art. 1 c. 4).
  *
- * NOTA — i due documenti descrivono la somma integrativa in modo diverso: uno
- * come "quota esclusa dal reddito", l'altro come "somma esentasse". Qui è
- * implementata come somma EROGATA IN AGGIUNTA al netto, coerentemente con il
- * testo della norma ("è riconosciuta una somma, che non concorre alla formazione
- * del reddito"). Vedi semplificazioni.js → 'cuneo-somma-integrativa'.
+ * Fonte: docs/Trattamento_Integrativo_IRPEF_ex_Bonus_Renzi.md §9,
+ * docs/Detrazioni_Lavoro_Dipendente_e_Familiari_a_Carico_Guida_2026.md §4
  */
 
 import { CUNEO_FISCALE as C } from './parametri-2026.js';

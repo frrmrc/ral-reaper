@@ -2,101 +2,115 @@
  * GRAFICI — SVG generato a mano, nessuna libreria
  * ===============================================
  *
- * Ogni funzione riceve il risultato del calcolo e restituisce una stringa SVG.
- * I colori arrivano dalle variabili CSS, così i grafici seguono il tema chiaro
- * o scuro senza duplicare la palette.
+ * Ogni funzione riceve il risultato del calcolo e restituisce una stringa SVG
+ * (o HTML per i grafici che affiancano una legenda). I colori arrivano dalle
+ * variabili CSS, così i grafici seguono il tema chiaro o scuro senza
+ * duplicare la palette.
  *
  * Tre grafici, tre domande diverse:
- *   cascata    → dove finisce ogni euro della RAL?
- *   curva      → come cambia il netto al variare della RAL, e dove sono io?
- *   scaglioni  → perché l'IRPEF non è una percentuale unica?
+ *   ripartizioneRal → in che proporzione si divide la RAL?
+ *   curva           → come cambia il netto al variare della RAL, e dove sono io?
+ *   scaglioni       → perché l'IRPEF non è una percentuale unica?
  */
 
 import { euroTondo, numero, percentuale, testoSicuro } from './formato.js';
 
 /* ------------------------------------------------------------------ *
- * 1. CASCATA — dalla RAL al netto, voce per voce
+ * Ciambelle (donut): helper geometrico condiviso
  * ------------------------------------------------------------------ */
 
-export function graficoCascata(r) {
+/** Un punto sulla circonferenza di raggio `raggio`, ad `angolo` radianti dalle 12. */
+function puntoSuCerchio(cx, cy, raggio, angolo) {
+  return [cx + raggio * Math.sin(angolo), cy - raggio * Math.cos(angolo)];
+}
+
+/** Il tracciato SVG di una fetta di ciambella, fra due angoli espressi in radianti. */
+function tracciatoFettaDonut(cx, cy, raggioEsterno, raggioInterno, angoloIniziale, angoloFinale) {
+  const arcoIntero = angoloFinale - angoloIniziale >= Math.PI * 2 - 1e-6;
+  // Un cerchio pieno non si può disegnare con un solo arco SVG: si spezza in due semicerchi.
+  if (arcoIntero) angoloFinale -= 1e-4;
+
+  const [x1, y1] = puntoSuCerchio(cx, cy, raggioEsterno, angoloIniziale);
+  const [x2, y2] = puntoSuCerchio(cx, cy, raggioEsterno, angoloFinale);
+  const [x3, y3] = puntoSuCerchio(cx, cy, raggioInterno, angoloFinale);
+  const [x4, y4] = puntoSuCerchio(cx, cy, raggioInterno, angoloIniziale);
+  const arcoLungo = angoloFinale - angoloIniziale > Math.PI ? 1 : 0;
+
+  return `M ${x1.toFixed(2)} ${y1.toFixed(2)} `
+    + `A ${raggioEsterno} ${raggioEsterno} 0 ${arcoLungo} 1 ${x2.toFixed(2)} ${y2.toFixed(2)} `
+    + `L ${x3.toFixed(2)} ${y3.toFixed(2)} `
+    + `A ${raggioInterno} ${raggioInterno} 0 ${arcoLungo} 0 ${x4.toFixed(2)} ${y4.toFixed(2)} Z`;
+}
+
+/* ------------------------------------------------------------------ *
+ * 1. RIPARTIZIONE DELLA RAL — quanto va a ciascuna voce, in proporzione
+ * ------------------------------------------------------------------ */
+
+/**
+ * Le cinque fette sommano ESATTAMENTE alla RAL: sono le trattenute più la
+ * quota che resta. Il trattamento integrativo e il cuneo fiscale non sono
+ * fette di RAL — sono somme aggiunte dal datore che non provengono dalla
+ * RAL — e per questo compaiono come nota a parte sotto la torta, non come
+ * spicchio: includerli nella torta ne romperebbe il significato di "come si
+ * divide la RAL" (la somma degli spicchi non farebbe più 100%).
+ */
+export function graficoRipartizioneRal(r) {
+  const nettoDaRal = r.ral - r.totaleTrattenute;
+
   const voci = [
-    { etichetta: 'RAL', valore: r.ral, tipo: 'totale' },
-    { etichetta: 'Contributi INPS', valore: -r.contributiInps, tipo: 'trattenuta' },
-    { etichetta: 'IRPEF netta', valore: -r.irpefNetta, tipo: 'trattenuta' },
-    { etichetta: 'Add. regionale', valore: -r.addizionaleRegionale, tipo: 'trattenuta' },
-    { etichetta: 'Add. comunale', valore: -r.addizionaleComunale, tipo: 'trattenuta' },
-    { etichetta: 'Tratt. integrativo', valore: r.trattamentoIntegrativo, tipo: 'erogazione' },
-    { etichetta: 'Cuneo fiscale', valore: r.sommaCuneo, tipo: 'erogazione' },
-    { etichetta: 'Netto', valore: r.nettoAnnuo, tipo: 'totale' },
-  ].filter((v) => v.tipo === 'totale' || Math.abs(v.valore) > 0.005);
+    { chiave: 'inps', etichetta: 'Contributi INPS', valore: r.contributiInps },
+    { chiave: 'irpef', etichetta: 'IRPEF netta', valore: r.irpefNetta },
+    { chiave: 'regionale', etichetta: 'Addizionale regionale', valore: r.addizionaleRegionale },
+    { chiave: 'comunale', etichetta: 'Addizionale comunale', valore: r.addizionaleComunale },
+    { chiave: 'netto', etichetta: 'Netto da RAL', valore: nettoDaRal },
+  ].filter((v) => v.valore > 0.005);
 
-  const L = 900, A = 340;                      // area di disegno
-  const margine = { alto: 24, basso: 78, sinistro: 8, destro: 8 };
-  const altezzaUtile = A - margine.alto - margine.basso;
+  const cx = 120, cy = 120, raggioEsterno = 100, raggioInterno = 58;
 
-  const massimo = Math.max(r.ral, r.nettoAnnuo) * 1.06;
-  const y = (v) => margine.alto + altezzaUtile * (1 - v / massimo);
+  let angolo = 0;
+  const fette = voci.map((v) => {
+    const quota = v.valore / r.ral;
+    const ampiezza = quota * Math.PI * 2;
+    const tracciato = tracciatoFettaDonut(cx, cy, raggioEsterno, raggioInterno, angolo, angolo + ampiezza);
+    angolo += ampiezza;
 
-  const larghezzaColonna = (L - margine.sinistro - margine.destro) / voci.length;
-  const larghezzaBarra = Math.min(78, larghezzaColonna * 0.6);
-
-  let cumulato = 0;
-  const barre = [];
-
-  for (const [i, voce] of voci.entries()) {
-    const centro = margine.sinistro + larghezzaColonna * (i + 0.5);
-    const x = centro - larghezzaBarra / 2;
-
-    let daValore, aValore;
-    if (voce.tipo === 'totale') {
-      daValore = 0;
-      aValore = voce.valore;
-      cumulato = voce.valore;
-    } else {
-      daValore = cumulato;
-      aValore = cumulato + voce.valore;
-      cumulato = aValore;
-    }
-
-    const alto = Math.min(y(daValore), y(aValore));
-    const altezza = Math.max(2, Math.abs(y(daValore) - y(aValore)));
-
-    barre.push({ ...voce, x, centro, alto, altezza, cumulato, larghezza: larghezzaBarra });
-  }
-
-  const connettori = barre.slice(0, -1).map((b, i) => {
-    const successiva = barre[i + 1];
-    if (successiva.tipo === 'totale') return '';
-    const yLinea = y(b.cumulato);
-    return `<line class="cascata-connettore" x1="${(b.x + b.larghezza).toFixed(1)}" y1="${yLinea.toFixed(1)}"
-             x2="${successiva.x.toFixed(1)}" y2="${yLinea.toFixed(1)}" />`;
-  }).join('');
-
-  const rettangoli = barre.map((b) => {
-    const segno = b.tipo === 'trattenuta' ? '−' : b.tipo === 'erogazione' ? '+' : '';
-    const valoreAssoluto = Math.abs(b.valore);
     return `
-      <g class="cascata-voce cascata-${b.tipo}">
-        <title>${testoSicuro(b.etichetta)}: ${segno}${euroTondo(valoreAssoluto)}</title>
-        <rect x="${b.x.toFixed(1)}" y="${b.alto.toFixed(1)}"
-              width="${b.larghezza.toFixed(1)}" height="${b.altezza.toFixed(1)}" rx="3" />
-        <text class="cascata-valore" x="${b.centro.toFixed(1)}" y="${(b.alto - 8).toFixed(1)}">
-          ${segno}${euroTondo(valoreAssoluto)}
-        </text>
-        <text class="cascata-etichetta" x="${b.centro.toFixed(1)}" y="${A - margine.basso + 22}">
-          ${testoSicuro(b.etichetta)}
-        </text>
-      </g>`;
+      <path class="fetta-ral fetta-ral-${v.chiave}" d="${tracciato}">
+        <title>${testoSicuro(v.etichetta)}: ${euroTondo(v.valore)} (${percentuale(quota)} della RAL)</title>
+      </path>`;
   }).join('');
 
-  return `
-    <svg class="grafico grafico-cascata" viewBox="0 0 ${L} ${A}" role="img"
-         aria-label="Cascata dalla RAL al netto annuo">
-      <line class="asse" x1="${margine.sinistro}" y1="${y(0).toFixed(1)}"
-            x2="${L - margine.destro}" y2="${y(0).toFixed(1)}" />
-      ${connettori}
-      ${rettangoli}
+  const donut = `
+    <svg class="grafico-torta-ral" viewBox="0 0 240 240" role="img"
+         aria-label="Ripartizione della RAL fra trattenute e netto">
+      ${fette}
+      <text class="torta-centro-etichetta" x="${cx}" y="${cy - 10}" text-anchor="middle">RAL</text>
+      <text class="torta-centro-valore" x="${cx}" y="${cy + 14}" text-anchor="middle">
+        ${euroTondo(r.ral)}
+      </text>
     </svg>`;
+
+  const legenda = `
+    <ul class="ral-legenda">
+      ${voci.map((v) => `
+        <li>
+          <span class="legenda-pallino fetta-ral-${v.chiave}"></span>
+          <span class="legenda-fascia">${testoSicuro(v.etichetta)}</span>
+          <span class="legenda-numeri">
+            <span class="legenda-quota">${percentuale(v.valore / r.ral)}</span>
+            <span class="legenda-imposta">${euroTondo(v.valore)}</span>
+          </span>
+        </li>`).join('')}
+    </ul>`;
+
+  const notaErogazioni = r.totaleErogazioni > 0.005 ? `
+    <p class="ral-nota-erogazioni">
+      + ${euroTondo(r.totaleErogazioni)} di trattamento integrativo e cuneo fiscale si aggiungono
+      in busta paga, senza tassazione: non sono una fetta della RAL, ma portano il netto reale a
+      <strong>${euroTondo(r.nettoAnnuo)}</strong>.
+    </p>` : '';
+
+  return `<div class="ral-vista">${donut}${legenda}</div>${notaErogazioni}`;
 }
 
 /* ------------------------------------------------------------------ *
@@ -169,6 +183,14 @@ export function graficoCurva(punti, ralCorrente) {
   return `
     <svg class="grafico grafico-curva" viewBox="0 0 ${L} ${A}" role="img"
          aria-label="Andamento del netto annuo e della pressione fiscale al variare della RAL">
+      <defs>
+        <!-- Le fermate prendono il colore dal CSS: la sfumatura sotto la curva
+             resta agganciata alla stessa variabile della linea. -->
+        <linearGradient id="velo-netto" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" class="velo-netto-alto" />
+          <stop offset="100%" class="velo-netto-basso" />
+        </linearGradient>
+      </defs>
       ${grigliaY}
       ${griglia}
       <path class="curva-area" d="${areaNetto}" />
@@ -200,8 +222,14 @@ export function graficoScaglioni(r) {
   const L = 900;
   const altezzaRiga = 62;
   const A = scaglioni.length * altezzaRiga + 30;
-  const margine = { sinistro: 150, destro: 140 };
+  // margine.destro ospita un blocco a DUE RIGHE (quota tassata + imposta),
+  // ancorato a una x fissa indipendente dalla larghezza della barra: è quella
+  // larghezza variabile, in un layout a una sola riga, a far scontrare il
+  // testo della quota con quello dell'imposta quando la barra è molto larga
+  // (tipicamente il primo scaglione, il caso più comune).
+  const margine = { sinistro: 150, destro: 190 };
   const larghezzaUtile = L - margine.sinistro - margine.destro;
+  const xBloccoDestro = L - 16;
 
   const righe = scaglioni.map((s, i) => {
     const y = i * altezzaRiga + 16;
@@ -219,11 +247,11 @@ export function graficoScaglioni(r) {
         <text class="scaglione-aliquota" x="${(margine.sinistro + 10).toFixed(1)}" y="${y + 26}">
           ${percentuale(s.aliquota, 0)}
         </text>
-        <text class="scaglione-imposta" x="${L - margine.destro + 12}" y="${y + 26}">
-          ${euroTondo(s.imposta)}
+        <text class="scaglione-quota" x="${xBloccoDestro}" y="${y + 16}">
+          ${euroTondo(s.quotaTassata)} di imponibile
         </text>
-        <text class="scaglione-quota" x="${(margine.sinistro + Math.max(2, larghezza) + 10).toFixed(1)}" y="${y + 26}">
-          su ${euroTondo(s.quotaTassata)}
+        <text class="scaglione-imposta" x="${xBloccoDestro}" y="${y + 36}">
+          ${euroTondo(s.imposta)} di imposta
         </text>
       </g>`;
   }).join('');

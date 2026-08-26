@@ -382,7 +382,7 @@ describe('Registro delle semplificazioni', () => {
     for (const s of SEMPLIFICAZIONI) {
       assert.ok(s.id && s.titolo && s.descrizione, `voce incompleta: ${s.id}`);
       assert.ok(['alto', 'medio', 'basso'].includes(s.impatto), `impatto non valido in ${s.id}`);
-      assert.ok(['semplificazione', 'divergenza-fonti'].includes(s.tipo), `tipo non valido in ${s.id}`);
+      assert.equal(s.tipo, 'semplificazione', `tipo non valido in ${s.id}`);
     }
   });
 
