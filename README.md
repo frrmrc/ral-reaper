@@ -1,13 +1,21 @@
 # Dalla RAL al netto — calcolatore 2026
 
-Calcolatore web della retribuzione netta annuale e mensile a partire dalla RAL,
-con il dettaglio di ogni trattenuta e il riferimento normativo di ogni regola.
+[![Anno d'imposta](https://img.shields.io/badge/anno%20d%27imposta-2026-1f6feb)](src/calcolo/parametri-2026.js)
+[![Test](https://img.shields.io/badge/test-57%20passati-2ea043)](test/)
+[![Dipendenze](https://img.shields.io/badge/dipendenze-0-8957e5)](package.json)
+[![Build](https://img.shields.io/badge/build-nessuno-6e7681)](index.html)
+[![Node](https://img.shields.io/badge/node-%E2%89%A520-339933?logo=node.js&logoColor=white)](package.json)
 
-Nessuna dipendenza, nessun build step: HTML, CSS e moduli ES.
+`irpef` · `inps` · `detrazioni` · `addizionali` · `cuneo-fiscale` · `busta-paga` · `vanilla-js`
+
+Calcolatore web della retribuzione netta annuale e mensile a partire dalla RAL: per
+ogni trattenuta mostra l'importo, il modo in cui è stato ottenuto e la norma da cui
+discende. È scritto in HTML, CSS e moduli ES, quindi non ha dipendenze da installare
+né un build step da eseguire.
 
 ```bash
 npm run dev                # server locale su http://localhost:4173
-npm test                   # 50 test sulle regole di calcolo
+npm test                   # 57 test sulle regole di calcolo
 npm run aggiorna-aliquote  # riscarica le aliquote delle addizionali dal MEF
 ```
 
@@ -15,8 +23,9 @@ npm run aggiorna-aliquote  # riscarica le aliquote delle addizionali dal MEF
 
 ## Come è organizzato il calcolo
 
-Ogni regola vive in un file suo. Se un numero non torna, il file da aprire è
-indicato nell'interfaccia accanto a ogni voce del risultato.
+Ogni regola vive in un file suo, e quando un numero non torna l'interfaccia dice
+già quale aprire: accanto a ogni voce del risultato compare il file che l'ha
+prodotta.
 
 ```
 src/calcolo/
@@ -32,7 +41,8 @@ src/calcolo/
 └── calcola-netto.js                ← orchestratore: mette in fila i moduli sopra
 ```
 
-La catena, nell'ordine esatto in cui il codice la esegue:
+Messi in fila, quei moduli compongono la catena che il codice esegue in
+quest'ordine esatto:
 
 ```
 RAL
@@ -58,25 +68,18 @@ RAL
  = NETTO ANNUO
 ```
 
-Due punti che sfuggono spesso:
-
-- **Le detrazioni non riducono il reddito, riducono l'imposta.** E non possono
-  generare un credito: al massimo azzerano l'IRPEF.
-- **Trattamento integrativo e cuneo fiscale hanno segno positivo.** Non sono
-  detrazioni: sono soldi che entrano nel netto.
-
 ---
 
-## I numeri non sono sparsi nel codice
+## Adattabilità del calcolo a future norme
 
-Ogni costante normativa sta in [`src/calcolo/parametri-2026.js`](src/calcolo/parametri-2026.js),
-con la propria fonte accanto. Per aggiornare il calcolatore a un nuovo anno si
-modifica quel file e nient'altro.
+Ogni costante normativa sta in [`src/calcolo/parametri-2026.js`](src/calcolo/parametri-2026.js)
+con la propria fonte accanto, così per aggiornare il calcolatore a un nuovo anno
+d'imposta si modifica quel file e nient'altro.
 
-Le aliquote delle addizionali fanno eccezione, e per una buona ragione: Regioni
-e Comuni deliberano ogni anno, a volte a metà anno con effetto retroattivo.
-Scriverle a mano significa disallinearsi in poche settimane. Vengono quindi
-scaricate dai CSV ufficiali del Dipartimento delle Finanze:
+Le aliquote delle addizionali fanno eccezione, e per una buona ragione: Regioni e
+Comuni deliberano ogni anno, a volte a metà anno con effetto retroattivo, quindi
+scriverle a mano significherebbe disallinearsi nel giro di poche settimane. Vengono
+invece scaricate dai CSV ufficiali del Dipartimento delle Finanze:
 
 ```bash
 npm run aggiorna-aliquote
@@ -84,32 +87,18 @@ npm run aggiorna-aliquote
 
 Lo script [`strumenti/aggiorna-aliquote.mjs`](strumenti/aggiorna-aliquote.mjs)
 rigenera `src/dati/aliquote-regionali-2026.js` (21 regioni) e
-`src/dati/aliquote-comunali-2026.json` (7.897 comuni), gestendo due casi che il
-dato grezzo non risolve da solo:
+`src/dati/aliquote-comunali-2026.json` (7.897 comuni), e nel farlo risolve due
+ambiguità che il dato grezzo si porta dietro:
 
 1. **Delibere multiple per la stessa Regione.** Le regioni in piano di rientro
    sanitario subiscono una rideterminazione dal Commissario ad acta, che nel CSV
-   appare come una seconda delibera. Vince la più recente — altrimenti Puglia e
+   appare come una seconda delibera; vince la più recente, altrimenti Puglia e
    Molise risulterebbero con aliquote troppo basse.
-2. **Aliquota comunale `0*`.** Non è uno zero: significa "delibera non ancora
-   pubblicata". Per il 2026, 3.954 comuni su 7.897 sono in questa condizione.
-   Lo script ripiega sull'aliquota dell'anno precedente e marca il dato, così
-   l'interfaccia può dichiararlo all'utente.
+2. **Aliquota comunale `0*`.** Non è uno zero, significa "delibera non ancora
+   pubblicata", e per il 2026 riguarda 3.954 comuni su 7.897. In quei casi lo
+   script ripiega sull'aliquota dell'anno precedente e marca il dato, così
+   l'interfaccia può dichiararlo all'utente invece di far finta di niente.
 
----
-
-## Le semplificazioni sono dichiarate, non nascoste
-
-[`src/calcolo/semplificazioni.js`](src/calcolo/semplificazioni.js) elenca ogni
-scostamento dalla busta paga reale, con l'impatto stimato. L'interfaccia legge
-quel file e lo mostra in fondo alla pagina: **se implementi una di quelle regole,
-cancella la voce dal file** e sparisce anche dal sito.
-
-Un risultato che sorprende, ma è corretto: il trattamento integrativo fra 15.000 e
-28.000 € vale `detrazioni − imposta lorda` (art. 1 c. 1 del D.L. 3/2020), quindi con
-la sola detrazione da lavoro dipendente **non spetta**. Spetta solo se altre detrazioni
-(familiari a carico, mutuo, spese sanitarie) superano l'imposta lorda. È quello che si
-osserva nelle buste paga reali.
 
 ---
 
@@ -119,12 +108,12 @@ osserva nelle buste paga reali.
 npm test
 ```
 
-50 test, ciascuno con la fonte del valore atteso in commento. Oltre ai casi
-puntuali presi dagli esempi dei documenti, tre test presidiano proprietà che
-devono valere sempre:
+Sono 57 test, ciascuno con la fonte del valore atteso in commento. Accanto ai casi
+puntuali presi dagli esempi dei documenti normativi, tre di essi presidiano
+proprietà che devono valere sempre, a qualunque livello di reddito:
 
 - il netto cresce in modo monotono al crescere della RAL, da 5.000 a 200.000 €;
-- nessuna voce diventa negativa a nessun livello di reddito;
+- nessuna voce diventa negativa;
 - la catena chiude: `RAL − trattenute + erogazioni = netto`.
 
 ---
@@ -142,13 +131,13 @@ test/                       suite di test
 docs/                       i documenti normativi usati come fonte
 ```
 
-`src/ui/` non contiene nessuna regola fiscale, `src/calcolo/` non contiene
-nessun riferimento al DOM. La separazione è netta di proposito: le regole si
-possono leggere, testare e riusare senza aprire l'interfaccia.
+La separazione fra le due metà è netta di proposito: `src/ui/` non contiene nessuna
+regola fiscale e `src/calcolo/` non contiene nessun riferimento al DOM, così le
+regole si possono leggere, testare e riusare senza mai aprire l'interfaccia.
 
 ---
 
 ## Avvertenza
 
-Strumento di stima. Non sostituisce il cedolino elaborato dal consulente del
+È uno strumento di stima: non sostituisce il cedolino elaborato dal consulente del
 lavoro né la dichiarazione dei redditi.
